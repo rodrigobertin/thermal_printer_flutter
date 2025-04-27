@@ -1,5 +1,6 @@
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:thermal_printer_flutter/src/models/printer.dart';
+import 'package:thermal_printer_flutter/thermal_printer_flutter.dart';
 
 import 'thermal_printer_flutter_method_channel.dart';
 
@@ -28,11 +29,11 @@ abstract class ThermalPrinterFlutterPlatform extends PlatformInterface {
     throw UnimplementedError('platformVersion() has not been implemented.');
   }
 
-  Future<List<Printer>> getPrinters() {
+  Future<List<Printer>> getPrinters({required PrinterType printerType}) {
     throw UnimplementedError('getPrinters() has not been implemented.');
   }
 
-  Future<void> printBytes(List<int> bytes, Printer printer) {
+  Future<void> printBytes({required List<int> bytes, required Printer printer}) {
     throw UnimplementedError('printBytes() has not been implemented.');
   }
 }

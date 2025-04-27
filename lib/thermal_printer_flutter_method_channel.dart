@@ -19,11 +19,11 @@ class MethodChannelThermalPrinterFlutter extends ThermalPrinterFlutterPlatform {
   }
 
   @override
-  Future<List<Printer>> getPrinters() async {
+  Future<List<Printer>> getPrinters({required PrinterType printerType}) async {
     List<Printer> result = [];
     if (isWindows) {
-      final List<dynamic>? printers = await methodChannel.invokeMethod<List<dynamic>>('getPrinters');
-      if (isWindows) {
+      if (printerType == PrinterType.usb) {
+        final List<dynamic>? printers = await methodChannel.invokeMethod<List<dynamic>>('getPrinters');
         final List<String> resultWin = printers?.cast<String>() ?? [];
         result = resultWin.map((p) => Printer(type: PrinterType.usb, name: p)).toList();
       } else {
@@ -37,8 +37,8 @@ class MethodChannelThermalPrinterFlutter extends ThermalPrinterFlutterPlatform {
   }
 
   @override
-  Future<void> printBytes(List<int> bytes, Printer printer) async {
-    if (isWindows) {
+  Future<void> printBytes({required List<int> bytes, required Printer printer}) async {
+    if (isWindows && printer.type == PrinterType.usb) {
       final bool result = await methodChannel.invokeMethod<bool>(
             'printBytes',
             <String, dynamic>{

@@ -50,7 +50,7 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> _loadPrinters() async {
     try {
-      final printers = await _thermalPrinterFlutterPlugin.getPrinters();
+      final printers = await _thermalPrinterFlutterPlugin.getPrinters(printerType: PrinterType.usb);
       setState(() {
         _printers = printers;
         if (printers.isNotEmpty) {
@@ -87,7 +87,7 @@ class _MyAppState extends State<MyApp> {
       //   ..feed(2)
       //   ..cut();
 
-      await _thermalPrinterFlutterPlugin.printBytes(bytes, _selectedPrinter!);
+      await _thermalPrinterFlutterPlugin.printBytes(bytes: bytes, printer: _selectedPrinter!);
     } catch (e) {
       print('Erro ao imprimir: $e');
     }
