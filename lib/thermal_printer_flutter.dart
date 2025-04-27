@@ -1,4 +1,7 @@
+import 'package:thermal_printer_flutter/src/models/printer.dart';
 import 'thermal_printer_flutter_platform_interface.dart';
+export './src/models/printer.dart';
+export './src/enums/printer_type.dart';
 
 class ThermalPrinterFlutter {
   Future<String?> getPlatformVersion() {
@@ -9,7 +12,7 @@ class ThermalPrinterFlutter {
     return ThermalPrinterFlutterPlatform.instance.getPrinters();
   }
 
-  Future<bool> printBytes(List<int> bytes, String printerName) {
-    return ThermalPrinterFlutterPlatform.instance.printBytes(bytes, printerName);
+  Future<void> printBytes(List<int> bytes, Printer printer) {
+    return ThermalPrinterFlutterPlatform.instance.printBytes(bytes, printer);
   }
 }

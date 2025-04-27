@@ -18,8 +18,8 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   String _platformVersion = 'Unknown';
   final _thermalPrinterFlutterPlugin = ThermalPrinterFlutter();
-  List<String> _printers = [];
-  String? _selectedPrinter;
+  List<Printer> _printers = [];
+  Printer? _selectedPrinter;
 
   @override
   void initState() {
@@ -116,15 +116,15 @@ class _MyAppState extends State<MyApp> {
                 if (_printers.isNotEmpty) ...[
                   const Text('Selecione uma impressora:'),
                   const SizedBox(height: 10),
-                  DropdownButton<String>(
+                  DropdownButton<Printer>(
                     value: _selectedPrinter,
-                    items: _printers.map((String printer) {
-                      return DropdownMenuItem<String>(
+                    items: _printers.map((printer) {
+                      return DropdownMenuItem<Printer>(
                         value: printer,
-                        child: Text(printer),
+                        child: Text(printer.name),
                       );
                     }).toList(),
-                    onChanged: (String? newValue) {
+                    onChanged: (newValue) {
                       setState(() {
                         _selectedPrinter = newValue;
                       });
