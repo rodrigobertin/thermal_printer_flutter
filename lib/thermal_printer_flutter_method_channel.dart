@@ -1,11 +1,9 @@
-import 'dart:nativewrappers/_internal/vm/lib/developer.dart';
-import 'dart:typed_data';
+import 'dart:developer';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:thermal_printer_flutter/src/helpers/platform.dart';
-import 'package:thermal_printer_flutter/src/models/printer.dart';
 import 'package:thermal_printer_flutter/thermal_printer_flutter.dart';
-
 import 'thermal_printer_flutter_platform_interface.dart';
 
 /// An implementation of [ThermalPrinterFlutterPlatform] that uses method channels.
