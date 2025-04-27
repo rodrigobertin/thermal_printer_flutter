@@ -1,15 +1,18 @@
 name: thermal_printer_flutter
 description: "A new Flutter plugin project."
 version: 0.0.1
-homepage:
+homepage: none
 
 environment:
   sdk: ^3.6.2
-  flutter: '>=3.3.0'
+  flutter: ">=3.3.0"
 
 dependencies:
   flutter:
     sdk: flutter
+  flutter_web_plugins:
+    sdk: flutter
+  web: ^0.5.1
   plugin_platform_interface: ^2.0.2
 
 dev_dependencies:
@@ -45,6 +48,9 @@ flutter:
         pluginClass: ThermalPrinterFlutterPlugin
       windows:
         pluginClass: ThermalPrinterFlutterPluginCApi
+      web:
+        pluginClass: ThermalPrinterFlutterWeb
+        fileName: thermal_printer_flutter_web.dart
 
   # To add assets to your plugin package, add an assets section, like this:
   # assets:

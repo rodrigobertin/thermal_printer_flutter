@@ -5,6 +5,8 @@
 #include <flutter/plugin_registrar_windows.h>
 
 #include <memory>
+#include <string>
+#include <vector>
 
 namespace thermal_printer_flutter {
 
@@ -24,6 +26,10 @@ class ThermalPrinterFlutterPlugin : public flutter::Plugin {
   void HandleMethodCall(
       const flutter::MethodCall<flutter::EncodableValue> &method_call,
       std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result);
+
+ private:
+  std::vector<std::string> GetPrinters();
+  void PrintBytes(const std::vector<uint8_t>& bytes, const std::string& printerName);
 };
 
 }  // namespace thermal_printer_flutter

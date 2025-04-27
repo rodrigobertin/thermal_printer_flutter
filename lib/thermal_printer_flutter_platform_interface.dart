@@ -26,4 +26,12 @@ abstract class ThermalPrinterFlutterPlatform extends PlatformInterface {
   Future<String?> getPlatformVersion() {
     throw UnimplementedError('platformVersion() has not been implemented.');
   }
+
+  Future<List<String>> getPrinters() {
+    throw UnimplementedError('getPrinters() has not been implemented.');
+  }
+
+  Future<bool> printBytes(List<int> bytes, String printerName) {
+    throw UnimplementedError('printBytes() has not been implemented.');
+  }
 }
