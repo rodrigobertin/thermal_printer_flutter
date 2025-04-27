@@ -50,7 +50,7 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> _loadPrinters() async {
     try {
-      final printers = await _thermalPrinterFlutterPlugin.getPrinters(printerType: PrinterType.usb);
+      final printers = await _thermalPrinterFlutterPlugin.getPrinters(printerType: PrinterType.bluethoot);
       setState(() {
         _printers = printers;
         if (printers.isNotEmpty) {

@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:developer';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:thermal_printer_flutter/src/helpers/platform.dart';
+import 'package:thermal_printer_flutter/src/win_ble.dart';
 import 'package:thermal_printer_flutter/thermal_printer_flutter.dart';
 import 'thermal_printer_flutter_platform_interface.dart';
 
@@ -20,38 +22,55 @@ class MethodChannelThermalPrinterFlutter extends ThermalPrinterFlutterPlatform {
 
   @override
   Future<List<Printer>> getPrinters({required PrinterType printerType}) async {
-    List<Printer> result = [];
-    if (isWindows) {
-      if (printerType == PrinterType.usb) {
-        final List<dynamic>? printers = await methodChannel.invokeMethod<List<dynamic>>('getPrinters');
-        final List<String> resultWin = printers?.cast<String>() ?? [];
-        result = resultWin.map((p) => Printer(type: PrinterType.usb, name: p)).toList();
-      } else {
-        _logPlatformNotSuported();
-      }
-    } else {
+    if (!isWindows) {
       _logPlatformNotSuported();
+      return [];
     }
 
-    return result;
+    if (printerType == PrinterType.usb) {
+      try {
+        final List<dynamic>? printers = await methodChannel.invokeMethod<List<dynamic>>('getPrinters');
+        final List<String> resultWin = printers?.cast<String>() ?? [];
+        return resultWin.map((p) => Printer(type: PrinterType.usb, name: p)).toList();
+      } catch (e) {
+        log('Erro ao buscar impressoras USB: $e', name: 'THERMAL_PRINTER_FLUTTER');
+        return [];
+      }
+    } else if (printerType == PrinterType.bluethoot) {
+      try {
+        return await WinBleManager.instance.scanPrinters();
+      } catch (e) {
+        log('Erro ao buscar impressoras Bluetooth: $e', name: 'THERMAL_PRINTER_FLUTTER');
+        return [];
+      }
+    }
+
+    return [];
   }
 
   @override
   Future<void> printBytes({required List<int> bytes, required Printer printer}) async {
     if (isWindows && printer.type == PrinterType.usb) {
-      final bool result = await methodChannel.invokeMethod<bool>(
-            'printBytes',
-            <String, dynamic>{
-              'bytes': bytes,
-              'printerName': printer.name,
-            },
-          ) ??
-          false;
-      if (result == false) log('printBytes error', name: 'THERMAL_PRINTER_FLUTTER');
+      try {
+        final bool result = await methodChannel.invokeMethod<bool>(
+              'printBytes',
+              <String, dynamic>{
+                'bytes': bytes,
+                'printerName': printer.name,
+              },
+            ) ??
+            false;
+        if (!result) {
+          log('Falha ao imprimir bytes', name: 'THERMAL_PRINTER_FLUTTER');
+        }
+      } catch (e) {
+        log('Erro ao imprimir: $e', name: 'THERMAL_PRINTER_FLUTTER');
+        rethrow;
+      }
     }
   }
 
   void _logPlatformNotSuported() {
-    log('Platform not suported', name: 'THERMAL_PRINTER_FLUTTER');
+    log('Plataforma não suportada', name: 'THERMAL_PRINTER_FLUTTER');
   }
 }

@@ -1,34 +1,39 @@
 import 'dart:convert';
+
 import 'package:thermal_printer_flutter/src/enums/printer_type.dart';
 
 class Printer {
   final String name;
   final String ip;
   final String port;
-  final String vendorId;
+  final String bleAddress;
   final PrinterType type;
+  final bool isConnected;
 
   Printer({
     required this.type,
     this.name = '',
     this.ip = '',
     this.port = '9100',
-    this.vendorId = '',
+    this.bleAddress = '',
+    this.isConnected = false,
   });
 
   Printer copyWith({
     String? name,
     String? ip,
     String? port,
-    String? vendorId,
+    String? bleAddress,
     PrinterType? type,
+    bool? isConnected,
   }) {
     return Printer(
       name: name ?? this.name,
       ip: ip ?? this.ip,
       port: port ?? this.port,
-      vendorId: vendorId ?? this.vendorId,
+      bleAddress: bleAddress ?? this.bleAddress,
       type: type ?? this.type,
+      isConnected: isConnected ?? this.isConnected,
     );
   }
 
@@ -37,8 +42,9 @@ class Printer {
       'name': name,
       'ip': ip,
       'port': port,
-      'vendorId': vendorId,
+      'bleAddress': bleAddress,
       'type': type.name,
+      'isConnected': isConnected,
     };
   }
 
@@ -47,8 +53,9 @@ class Printer {
       name: map['name'] ?? '',
       ip: map['ip'] ?? '',
       port: map['port'] ?? '',
-      vendorId: map['vendorId'] ?? '',
+      bleAddress: map['bleAddress'] ?? '',
       type: PrinterType.values.byName(map['type']),
+      isConnected: map['isConnected'] ?? false,
     );
   }
 
