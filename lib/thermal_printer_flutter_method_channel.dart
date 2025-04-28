@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:thermal_printer_flutter/src/helpers/platform.dart';
 import 'package:thermal_printer_flutter/src/mobile_ble.dart';
+import 'package:thermal_printer_flutter/src/network_printer.dart';
 import 'package:thermal_printer_flutter/src/win_ble.dart';
 import 'package:thermal_printer_flutter/thermal_printer_flutter.dart';
 import 'thermal_printer_flutter_platform_interface.dart';
@@ -46,6 +47,9 @@ class MethodChannelThermalPrinterFlutter implements ThermalPrinterFlutterPlatfor
         log('Erro ao buscar impressoras Bluetooth: $e', name: 'THERMAL_PRINTER_FLUTTER');
         return [];
       }
+    } else if (printerType == PrinterType.network) {
+      // Para impressoras de rede, o usuário precisa fornecer o IP e porta manualmente
+      return [];
     }
 
     return [];
@@ -83,6 +87,20 @@ class MethodChannelThermalPrinterFlutter implements ThermalPrinterFlutterPlatfor
         log('Erro ao imprimir via Bluetooth: $e', name: 'THERMAL_PRINTER_FLUTTER');
         rethrow;
       }
+    } else if (printer.type == PrinterType.network) {
+      try {
+        final networkPrinter = NetworkPrinter(
+          host: printer.ip,
+          port: int.tryParse(printer.port) ?? 9100,
+        );
+        final success = await networkPrinter.printBytes(bytes);
+        if (!success) {
+          log('Falha ao imprimir via rede', name: 'THERMAL_PRINTER_FLUTTER');
+        }
+      } catch (e) {
+        log('Erro ao imprimir via rede: $e', name: 'THERMAL_PRINTER_FLUTTER');
+        rethrow;
+      }
     }
   }
 
@@ -95,6 +113,17 @@ class MethodChannelThermalPrinterFlutter implements ThermalPrinterFlutterPlatfor
         return await MobileBleManager.instance.connect(printer);
       } else {
         _logPlatformNotSuported();
+        return false;
+      }
+    } else if (printer.type == PrinterType.network) {
+      try {
+        final networkPrinter = NetworkPrinter(
+          host: printer.ip,
+          port: int.tryParse(printer.port) ?? 9100,
+        );
+        return await networkPrinter.connect();
+      } catch (e) {
+        log('Erro ao conectar impressora de rede: $e', name: 'THERMAL_PRINTER_FLUTTER');
         return false;
       }
     }

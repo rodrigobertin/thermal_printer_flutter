@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:thermal_printer_flutter/thermal_printer_flutter.dart';
 import 'package:esc_pos_utils/esc_pos_utils.dart';
-import 'package:thermal_printer_flutter/src/win_ble.dart';
 
 void main() {
   runApp(const MyApp());
@@ -23,11 +22,20 @@ class _MyAppState extends State<MyApp> {
   Printer? _selectedPrinter;
   bool _isLoading = false;
   bool _isConnecting = false;
+  final _ipController = TextEditingController();
+  final _portController = TextEditingController(text: '9100');
 
   @override
   void initState() {
     super.initState();
     initPlatformState();
+  }
+
+  @override
+  void dispose() {
+    _ipController.dispose();
+    _portController.dispose();
+    super.dispose();
   }
 
   // Platform messages are asynchronous, so we initialize in an async method.
@@ -56,9 +64,10 @@ class _MyAppState extends State<MyApp> {
     try {
       final bluetoothPrinters = await _thermalPrinterFlutterPlugin.getPrinters(printerType: PrinterType.bluethoot);
       final usbPrinters = await _thermalPrinterFlutterPlugin.getPrinters(printerType: PrinterType.usb);
+      final networkPrinters = await _thermalPrinterFlutterPlugin.getPrinters(printerType: PrinterType.network);
 
       setState(() {
-        _printers = [...bluetoothPrinters, ...usbPrinters];
+        _printers = [...bluetoothPrinters, ...usbPrinters, ...networkPrinters];
         if (_printers.isNotEmpty) {
           _selectedPrinter = _printers[0];
         }
@@ -71,14 +80,16 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> _connectPrinter(Printer printer) async {
-    if (printer.type != PrinterType.bluethoot) return;
+    if (printer.type != PrinterType.bluethoot && printer.type != PrinterType.network) return;
 
     setState(() => _isConnecting = true);
     try {
       final connected = await _thermalPrinterFlutterPlugin.connect(printer: printer);
       if (connected) {
         setState(() {
-          final index = _printers.indexWhere((p) => p.bleAddress == printer.bleAddress);
+          final index = _printers.indexWhere((p) =>
+              (p.type == PrinterType.bluethoot && p.bleAddress == printer.bleAddress) ||
+              (p.type == PrinterType.network && p.ip == printer.ip && p.port == printer.port));
           if (index != -1) {
             _printers[index] = printer.copyWith(isConnected: true);
             _selectedPrinter = _printers[index];
@@ -90,6 +101,25 @@ class _MyAppState extends State<MyApp> {
     } finally {
       setState(() => _isConnecting = false);
     }
+  }
+
+  Future<void> _addNetworkPrinter() async {
+    if (_ipController.text.isEmpty) return;
+
+    final printer = Printer(
+      type: PrinterType.network,
+      name: 'Impressora de Rede (${_ipController.text})',
+      ip: _ipController.text,
+      port: _portController.text,
+    );
+
+    setState(() {
+      _printers.add(printer);
+      _selectedPrinter = printer;
+    });
+
+    _ipController.clear();
+    _portController.text = '9100';
   }
 
   Future<void> _printTest() async {
@@ -134,6 +164,37 @@ class _MyAppState extends State<MyApp> {
               children: [
                 Text('Running on: $_platformVersion\n'),
                 const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _ipController,
+                        decoration: const InputDecoration(
+                          labelText: 'IP da Impressora',
+                          hintText: '192.168.1.100',
+                        ),
+                        keyboardType: TextInputType.number,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    SizedBox(
+                      width: 100,
+                      child: TextField(
+                        controller: _portController,
+                        decoration: const InputDecoration(
+                          labelText: 'Porta',
+                        ),
+                        keyboardType: TextInputType.number,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: _addNetworkPrinter,
+                      child: const Text('Adicionar'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
                 ElevatedButton(
                   onPressed: _loadPrinters,
                   child: const Text('Carregar Impressoras'),
@@ -152,12 +213,20 @@ class _MyAppState extends State<MyApp> {
                         child: Row(
                           children: [
                             Icon(
-                              printer.type == PrinterType.bluethoot ? Icons.bluetooth : Icons.usb,
-                              color: printer.type == PrinterType.bluethoot ? (printer.isConnected ? Colors.blue : Colors.grey) : Colors.black,
+                              printer.type == PrinterType.bluethoot
+                                  ? Icons.bluetooth
+                                  : printer.type == PrinterType.network
+                                      ? Icons.language
+                                      : Icons.usb,
+                              color: printer.type == PrinterType.bluethoot
+                                  ? (printer.isConnected ? Colors.blue : Colors.grey)
+                                  : printer.type == PrinterType.network
+                                      ? (printer.isConnected ? Colors.green : Colors.grey)
+                                      : Colors.black,
                             ),
                             const SizedBox(width: 8),
                             Text(printer.name),
-                            if (printer.type == PrinterType.bluethoot)
+                            if (printer.type == PrinterType.bluethoot || printer.type == PrinterType.network)
                               Text(
                                 printer.isConnected ? ' (Conectada)' : ' (Desconectada)',
                                 style: TextStyle(
@@ -173,7 +242,7 @@ class _MyAppState extends State<MyApp> {
                         setState(() {
                           _selectedPrinter = newValue;
                         });
-                        if (newValue.type == PrinterType.bluethoot && !newValue.isConnected) {
+                        if ((newValue.type == PrinterType.bluethoot || newValue.type == PrinterType.network) && !newValue.isConnected) {
                           _connectPrinter(newValue);
                         }
                       }
