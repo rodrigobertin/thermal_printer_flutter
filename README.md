@@ -9,7 +9,7 @@ Flutter plugin for thermal printing with support for multiple platforms and conn
 | Android    | ❌  | ✅        | ✅      |
 | iOS        | ❌  | ✅        | ✅      |
 | macOS      | ❌  | ✅        | ✅      |
-| Windows    | ✅  | ✅        | ✅      |
+| Windows    | ✅  | 🚧      | ✅      |
 | Linux      | ❌  | ❌        | ✅      |
 | Web        | ❌  | ❌        | 🚧      |
 
