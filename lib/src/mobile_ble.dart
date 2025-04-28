@@ -114,7 +114,7 @@ class MobileBleManager {
 
   Future<List<Printer>> scanPrinters() async {
     try {
-      _scanSubscription?.cancel();
+      await _scanSubscription?.cancel();
       _scanSubscription = null;
       _devices.clear();
 

@@ -93,7 +93,7 @@ class WinBleManager {
 
       subscription = WinBle.scanStream.listen((event) async {
         if (event.name.isNotEmpty && !devices.containsKey(event.address)) {
-          if (true) {
+          if (_isPrinterDevice(event)) {
             final connected = await isConnected(event.address);
             devices[event.address] = Printer(
               type: PrinterType.bluethoot,
