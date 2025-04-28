@@ -2,7 +2,7 @@
 
 Flutter plugin for thermal printing with support for multiple platforms and connection types.
 
-## Support Table
+## Platforms
 
 | Platform   | USB | Bluetooth | Network |
 |------------|-----|-----------|---------|
