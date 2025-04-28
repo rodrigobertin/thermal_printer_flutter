@@ -76,8 +76,7 @@ class MobileBleManager {
         return;
       }
 
-      final services =
-          (await device.discoverServices()).skipWhile((value) => value.characteristics.where((element) => element.properties.write).isEmpty);
+      final services = (await device.discoverServices()).skipWhile((value) => value.characteristics.where((element) => element.properties.write).isEmpty);
 
       BluetoothCharacteristic? writeCharacteristic;
       for (var service in services) {
@@ -112,8 +111,34 @@ class MobileBleManager {
     }
   }
 
+  Future<bool> checkBluetoothState() async {
+    try {
+      if (Platform.isMacOS) {
+        final state = await FlutterBluePlus.adapterState.first;
+        if (state == BluetoothAdapterState.unknown) {
+          log('Bluetooth não suportado no macOS');
+          return false;
+        }
+        if (state == BluetoothAdapterState.off) {
+          log('Bluetooth desligado no macOS');
+          return false;
+        }
+      }
+      return true;
+    } catch (e) {
+      log('Erro ao verificar estado do Bluetooth: $e');
+      return false;
+    }
+  }
+
   Future<List<Printer>> scanPrinters() async {
     try {
+      // Verifica o estado do Bluetooth antes de prosseguir
+      final isBluetoothOk = await checkBluetoothState();
+      if (!isBluetoothOk) {
+        return [];
+      }
+
       await _scanSubscription?.cancel();
       _scanSubscription = null;
       _devices.clear();
@@ -121,6 +146,8 @@ class MobileBleManager {
       if (!isIos) {
         if (FlutterBluePlus.adapterStateNow != BluetoothAdapterState.on) {
           await FlutterBluePlus.turnOn();
+          // Aguarda um momento para o Bluetooth inicializar
+          await Future.delayed(const Duration(seconds: 1));
         }
       } else {
         final BluetoothAdapterState state = await FlutterBluePlus.adapterState.first;
@@ -130,12 +157,40 @@ class MobileBleManager {
         }
       }
 
-      await FlutterBluePlus.stopScan();
-      await FlutterBluePlus.startScan();
-
-      // Get system devices
+      // Primeiro tenta obter os dispositivos do sistema
       final systemDevices = await _getSystemDevices();
       _devices.addAll(systemDevices);
+      _sortDevices();
+
+      // Se não encontrou dispositivos no sistema, inicia a varredura
+      if (_devices.isEmpty) {
+        await FlutterBluePlus.stopScan();
+        await FlutterBluePlus.startScan(
+          timeout: const Duration(seconds: 5),
+          androidScanMode: AndroidScanMode.lowLatency,
+        );
+
+        // Listen to scan results
+        _scanSubscription = FlutterBluePlus.scanResults.listen((result) {
+          final devices = result
+              .map((e) => Printer(
+                    type: PrinterType.bluethoot,
+                    name: e.device.platformName,
+                    bleAddress: e.device.remoteId.str,
+                    isConnected: e.device.isConnected,
+                  ))
+              .where((device) => device.name.isNotEmpty)
+              .toList();
+
+          for (var device in devices) {
+            _updateOrAddPrinter(device);
+          }
+        });
+
+        // Aguarda um tempo para a varredura
+        await Future.delayed(const Duration(seconds: 5));
+        await FlutterBluePlus.stopScan();
+      }
 
       // Get bonded devices (Android only)
       if (Platform.isAndroid) {
@@ -144,24 +199,6 @@ class MobileBleManager {
       }
 
       _sortDevices();
-
-      // Listen to scan results
-      _scanSubscription = FlutterBluePlus.scanResults.listen((result) {
-        final devices = result
-            .map((e) => Printer(
-                  type: PrinterType.bluethoot,
-                  name: e.device.platformName,
-                  bleAddress: e.device.remoteId.str,
-                  isConnected: e.device.isConnected,
-                ))
-            .where((device) => device.name.isNotEmpty)
-            .toList();
-
-        for (var device in devices) {
-          _updateOrAddPrinter(device);
-        }
-      });
-
       return _devices;
     } catch (e) {
       log('Failed to scan printers: $e');

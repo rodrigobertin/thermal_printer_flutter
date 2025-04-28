@@ -63,11 +63,11 @@ class _MyAppState extends State<MyApp> {
     setState(() => _isLoading = true);
     try {
       final bluetoothPrinters = await _thermalPrinterFlutterPlugin.getPrinters(printerType: PrinterType.bluethoot);
-      final usbPrinters = await _thermalPrinterFlutterPlugin.getPrinters(printerType: PrinterType.usb);
-      final networkPrinters = await _thermalPrinterFlutterPlugin.getPrinters(printerType: PrinterType.network);
+      // final usbPrinters = await _thermalPrinterFlutterPlugin.getPrinters(printerType: PrinterType.usb);
+      // final networkPrinters = await _thermalPrinterFlutterPlugin.getPrinters(printerType: PrinterType.network);
 
       setState(() {
-        _printers = [...bluetoothPrinters, ...usbPrinters, ...networkPrinters];
+        _printers = [...bluetoothPrinters];
         if (_printers.isNotEmpty) {
           _selectedPrinter = _printers[0];
         }

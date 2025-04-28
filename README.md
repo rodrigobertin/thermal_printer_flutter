@@ -1,23 +1,23 @@
 # thermal_printer_flutter
 
-Plugin Flutter para impressão térmica com suporte a múltiplas plataformas e tipos de conexão.
+Flutter plugin for thermal printing with support for multiple platforms and connection types.
 
-## Tabela de Suporte
+## Support Table
 
-| Plataforma | USB | Bluetooth | Rede |
-|------------|-----|-----------|------|
-| Android    | ❌  | ✅        | ✅   |
-| iOS        | ❌  | ✅        | ✅   |
-| macOS      | ❌  | ✅        | ✅   |
-| Windows    | ✅  | ✅        | ✅   |
-| Linux      | ❌  | ❌        | ✅   |
-| Web        | ❌  | ❌        | ✅   |
+| Platform   | USB | Bluetooth | Network |
+|------------|-----|-----------|---------|
+| Android    | ❌  | ✅        | ✅      |
+| iOS        | ❌  | ✅        | ✅      |
+| macOS      | ❌  | ✅        | ✅      |
+| Windows    | ✅  | ✅        | ✅      |
+| Linux      | ❌  | ❌        | ✅      |
+| Web        | ❌  | ❌        | 🚧      |
 
-## Configuração do Projeto
+## Project Setup
 
 ### Android
 
-1. Adicione as seguintes permissões no arquivo `android/app/src/main/AndroidManifest.xml`:
+1. Add the following permissions to the `android/app/src/main/AndroidManifest.xml` file:
 
 ```xml
 <uses-permission android:name="android.permission.BLUETOOTH" />
@@ -28,7 +28,7 @@ Plugin Flutter para impressão térmica com suporte a múltiplas plataformas e t
 <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 ```
 
-2. Para Android 12 ou superior, adicione também:
+2. For Android 12 or higher, also add:
 
 ```xml
 <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
@@ -36,46 +36,60 @@ Plugin Flutter para impressão térmica com suporte a múltiplas plataformas e t
 
 ### iOS
 
-1. Adicione as seguintes chaves no arquivo `ios/Runner/Info.plist`:
+1. Add the following keys to the `ios/Runner/Info.plist` file:
 
 ```xml
 <key>NSBluetoothAlwaysUsageDescription</key>
-<string>Precisamos acessar o Bluetooth para conectar com impressoras térmicas</string>
+<string>We need Bluetooth access to connect to thermal printers</string>
 <key>NSBluetoothPeripheralUsageDescription</key>
-<string>Precisamos acessar o Bluetooth para conectar com impressoras térmicas</string>
+<string>We need Bluetooth access to connect to thermal printers</string>
 ```
 
-2. Para iOS 13 ou superior, adicione também:
+2. For iOS 13 or higher, also add:
 
 ```xml
 <key>NSBluetoothAlwaysAndWhenInUseUsageDescription</key>
-<string>Precisamos acessar o Bluetooth para conectar com impressoras térmicas</string>
+<string>We need Bluetooth access to connect to thermal printers</string>
 ```
 
 ### macOS
 
-1. Adicione as seguintes chaves no arquivo `macos/Runner/Info.plist`:
+1. Add the following keys to the `macos/Runner/Info.plist` file:
 
 ```xml
 <key>NSBluetoothAlwaysUsageDescription</key>
-<string>Precisamos acessar o Bluetooth para conectar com impressoras térmicas</string>
+<string>We need Bluetooth access to connect to thermal printers</string>
 <key>NSBluetoothPeripheralUsageDescription</key>
-<string>Precisamos acessar o Bluetooth para conectar com impressoras térmicas</string>
+<string>We need Bluetooth access to connect to thermal printers</string>
+```
+
+2. Add the following keys to the `macos/Runner/DebugProfile.entitlements` file:
+
+```xml
+<key>com.apple.security.device.bluetooth</key>
+<true/>
+```
+
+3. Add the following keys to the `macos/Runner/Release.entitlements` file:
+
+```xml
+<key>com.apple.security.device.bluetooth</key>
+<true/>
 ```
 
 ### Windows
 
-1. Para impressoras USB, certifique-se de que os drivers da impressora estão instalados
-2. Para Bluetooth, o Windows deve ter suporte a Bluetooth LE (Bluetooth 4.0 ou superior)
+1. For USB printers, ensure the printer drivers are installed.
+2. For Bluetooth printers, Windows must support Bluetooth LE (Bluetooth 4.0 or higher).
 
 ### Linux
 
-1. Para impressoras de rede, certifique-se de que o firewall permite conexões na porta 9100 (ou a porta configurada)
+1. For network printers, ensure that the firewall allows connections on port 9100 (or the configured port).
 
 ### Web
 
-1. Para impressoras de rede, certifique-se de que o servidor web permite conexões WebSocket
-2. Adicione a seguinte permissão no arquivo `web/index.html`:
+1. For network printers, ensure that the web server allows WebSocket connections.
+2. Add the following script to the `web/index.html` file:
 
 ```html
 <script>
@@ -87,45 +101,34 @@ Plugin Flutter para impressão térmica com suporte a múltiplas plataformas e t
 </script>
 ```
 
-## Uso
+## Usage
 
 ```dart
 import 'package:thermal_printer_flutter/thermal_printer_flutter.dart';
 
-// Criar uma instância do plugin
+// Create an instance of the plugin
 final thermalPrinter = ThermalPrinterFlutter();
 
-// Buscar impressoras
+// Search for printers
 final bluetoothPrinters = await thermalPrinter.getPrinters(printerType: PrinterType.bluethoot);
 final usbPrinters = await thermalPrinter.getPrinters(printerType: PrinterType.usb);
 final networkPrinters = await thermalPrinter.getPrinters(printerType: PrinterType.network);
 
-// Conectar com uma impressora
+// Connect to a printer
 final connected = await thermalPrinter.connect(printer: selectedPrinter);
 
-// Imprimir
+// Print
 await thermalPrinter.printBytes(bytes: bytes, printer: selectedPrinter);
 ```
 
-## Exemplo
+## Example
 
-Veja o exemplo completo em `example/lib/main.dart` para um exemplo de implementação com interface gráfica.
+Check out the complete example at `example/lib/main.dart` for a sample implementation with a graphical interface.
 
-## Dependências
+## Contribution
 
-Adicione ao seu `pubspec.yaml`:
+Contributions are welcome! Feel free to open issues or submit pull requests.
 
-```yaml
-dependencies:
-  thermal_printer_flutter: ^0.0.1
-  flutter_blue_plus: ^1.31.3
-  esc_pos_utils: ^1.1.0
-```
+## License
 
-## Contribuição
-
-Contribuições são bem-vindas! Sinta-se à vontade para abrir issues ou enviar pull requests.
-
-## Licença
-
-Este projeto está licenciado sob a licença MIT - veja o arquivo [LICENSE](LICENSE) para detalhes.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

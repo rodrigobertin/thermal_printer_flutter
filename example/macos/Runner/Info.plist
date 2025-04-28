@@ -2,6 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+<!-- thermal_printer_flutter -->
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Precisamos acessar o Bluetooth para conectar com impressoras térmicas</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>Precisamos acessar o Bluetooth para conectar com impressoras térmicas</string>
+<!-- thermal_printer_flutter -->
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleExecutable</key>

@@ -8,5 +8,9 @@
 	<true/>
 	<key>com.apple.security.network.server</key>
 	<true/>
+	<!-- thermal_printer_flutter -->
+	<key>com.apple.security.device.bluetooth</key>
+	<true/>
+	<!-- thermal_printer_flutter -->
 </dict>
 </plist>
