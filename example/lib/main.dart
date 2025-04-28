@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:thermal_printer_flutter/thermal_printer_flutter.dart';
 import 'package:esc_pos_utils/esc_pos_utils.dart';
+import 'package:thermal_printer_flutter/src/win_ble.dart';
 
 void main() {
   runApp(const MyApp());
@@ -20,6 +21,8 @@ class _MyAppState extends State<MyApp> {
   final _thermalPrinterFlutterPlugin = ThermalPrinterFlutter();
   List<Printer> _printers = [];
   Printer? _selectedPrinter;
+  bool _isLoading = false;
+  bool _isConnecting = false;
 
   @override
   void initState() {
@@ -49,16 +52,39 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> _loadPrinters() async {
+    setState(() => _isLoading = true);
     try {
-      final printers = await _thermalPrinterFlutterPlugin.getPrinters(printerType: PrinterType.bluethoot);
+      final bluetoothPrinters = await _thermalPrinterFlutterPlugin.getPrinters(printerType: PrinterType.bluethoot);
+      final usbPrinters = await _thermalPrinterFlutterPlugin.getPrinters(printerType: PrinterType.usb);
+
       setState(() {
-        _printers = printers;
-        if (printers.isNotEmpty) {
-          _selectedPrinter = printers[0];
+        _printers = [...bluetoothPrinters, ...usbPrinters];
+        if (_printers.isNotEmpty) {
+          _selectedPrinter = _printers[0];
         }
       });
     } catch (e) {
       print('Erro ao carregar impressoras: $e');
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _connectPrinter(Printer printer) async {
+    if (printer.type != PrinterType.bluethoot) return;
+
+    setState(() => _isConnecting = true);
+    try {
+      final connected = await _thermalPrinterFlutterPlugin.connect(printer: printer);
+      if (connected) {
+        setState(() {
+          _selectedPrinter = printer.copyWith(isConnected: true);
+        });
+      }
+    } catch (e) {
+      print('Erro ao conectar impressora: $e');
+    } finally {
+      setState(() => _isConnecting = false);
     }
   }
 
@@ -69,23 +95,19 @@ class _MyAppState extends State<MyApp> {
       final generator = Generator(PaperSize.mm80, await CapabilityProfile.load());
       List<int> bytes = [];
 
-      bytes += generator.text('Teste de impressao');
+      bytes += generator.text('Teste de impressão',
+          styles: const PosStyles(
+            align: PosAlign.center,
+            bold: true,
+            height: PosTextSize.size2,
+            width: PosTextSize.size2,
+          ));
+      bytes += generator.feed(2);
+      bytes += generator.text('Data: ${DateTime.now()}');
+      bytes += generator.feed(2);
+      bytes += generator.text('Esta é uma impressão de teste');
       bytes += generator.feed(2);
       bytes += generator.cut();
-      // final bytes = generator
-      //   ..text('Teste de Impressão',
-      //       styles: const PosStyles(
-      //         align: PosAlign.center,
-      //         bold: true,
-      //         height: PosTextSize.size2,
-      //         width: PosTextSize.size2,
-      //       ))
-      //   ..feed(2)
-      //   ..text('Data: ${DateTime.now()}')
-      //   ..feed(2)
-      //   ..text('Esta é uma impressão de teste')
-      //   ..feed(2)
-      //   ..cut();
 
       await _thermalPrinterFlutterPlugin.printBytes(bytes: bytes, printer: _selectedPrinter!);
     } catch (e) {
@@ -113,7 +135,9 @@ class _MyAppState extends State<MyApp> {
                   child: const Text('Carregar Impressoras'),
                 ),
                 const SizedBox(height: 20),
-                if (_printers.isNotEmpty) ...[
+                if (_isLoading)
+                  const CircularProgressIndicator()
+                else if (_printers.isNotEmpty) ...[
                   const Text('Selecione uma impressora:'),
                   const SizedBox(height: 10),
                   DropdownButton<Printer>(
@@ -121,20 +145,39 @@ class _MyAppState extends State<MyApp> {
                     items: _printers.map((printer) {
                       return DropdownMenuItem<Printer>(
                         value: printer,
-                        child: Text(printer.name),
+                        child: Row(
+                          children: [
+                            Text(printer.name),
+                            if (printer.type == PrinterType.bluethoot)
+                              Text(
+                                printer.isConnected ? ' (Conectada)' : ' (Desconectada)',
+                                style: TextStyle(
+                                  color: printer.isConnected ? Colors.green : Colors.red,
+                                ),
+                              ),
+                          ],
+                        ),
                       );
                     }).toList(),
                     onChanged: (newValue) {
-                      setState(() {
-                        _selectedPrinter = newValue;
-                      });
+                      if (newValue != null) {
+                        setState(() {
+                          _selectedPrinter = newValue;
+                        });
+                        if (newValue.type == PrinterType.bluethoot && !newValue.isConnected) {
+                          _connectPrinter(newValue);
+                        }
+                      }
                     },
                   ),
                   const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: _printTest,
-                    child: const Text('Imprimir Teste'),
-                  ),
+                  if (_isConnecting)
+                    const CircularProgressIndicator()
+                  else
+                    ElevatedButton(
+                      onPressed: _printTest,
+                      child: const Text('Imprimir Teste'),
+                    ),
                 ],
               ],
             ),

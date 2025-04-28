@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:developer';
+import 'dart:typed_data';
 import 'package:thermal_printer_flutter/thermal_printer_flutter.dart';
 import 'package:win_ble/win_ble.dart';
 import 'package:win_ble/win_file.dart';
@@ -43,7 +44,8 @@ class WinBleManager {
       await initialize();
     }
     try {
-      return await WinBle.isPaired(address);
+      return false;
+      // return await WinBle.isPaired(address);
     } catch (e) {
       log('Erro ao verificar conexão: $e', name: 'THERMAL_PRINTER_FLUTTER');
       return false;
@@ -55,9 +57,11 @@ class WinBleManager {
       await initialize();
     }
     try {
-      await WinBle.connect(address);
-      // Aguarda um pouco para garantir que a conexão foi estabelecida
-      await Future.delayed(const Duration(seconds: 2));
+      if (await WinBle.isPaired(address)) return true;
+      await Future.any([
+        WinBle.connect(address),
+        Future.delayed(const Duration(seconds: 3)).then((_) => throw TimeoutException('Timeout na conexão')),
+      ]);
       return await WinBle.isPaired(address);
     } catch (e) {
       log('Erro ao conectar: $e', name: 'THERMAL_PRINTER_FLUTTER');
@@ -89,7 +93,7 @@ class WinBleManager {
 
       subscription = WinBle.scanStream.listen((event) async {
         if (event.name.isNotEmpty && !devices.containsKey(event.address)) {
-          if (_isPrinterDevice(event)) {
+          if (true) {
             final connected = await isConnected(event.address);
             devices[event.address] = Printer(
               type: PrinterType.bluethoot,
@@ -141,4 +145,18 @@ class WinBleManager {
   }
 
   Stream<bool> get bluetoothStateStream => WinBle.bleState.map((state) => state == BleState.On);
+
+  Future<void> printBytes({required List<int> bytes, required String address}) async {
+    if (!_isInitialized) {
+      await initialize();
+    }
+    try {
+      // Converte a lista de inteiros para bytes
+
+      await WinBle.write(address: address, data: Uint8List.fromList(bytes), service: '', characteristic: '', writeWithResponse: false);
+    } catch (e) {
+      log('Erro ao imprimir: $e', name: 'THERMAL_PRINTER_FLUTTER');
+      rethrow;
+    }
+  }
 }

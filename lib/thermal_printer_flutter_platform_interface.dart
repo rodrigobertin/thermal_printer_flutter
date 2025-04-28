@@ -36,4 +36,8 @@ abstract class ThermalPrinterFlutterPlatform extends PlatformInterface {
   Future<void> printBytes({required List<int> bytes, required Printer printer}) {
     throw UnimplementedError('printBytes() has not been implemented.');
   }
+
+  Future<bool> connect({required Printer printer}) {
+    throw UnimplementedError('printBytes() has not been implemented.');
+  }
 }
