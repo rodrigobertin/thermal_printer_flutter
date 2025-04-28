@@ -78,7 +78,11 @@ class _MyAppState extends State<MyApp> {
       final connected = await _thermalPrinterFlutterPlugin.connect(printer: printer);
       if (connected) {
         setState(() {
-          _selectedPrinter = printer.copyWith(isConnected: true);
+          final index = _printers.indexWhere((p) => p.bleAddress == printer.bleAddress);
+          if (index != -1) {
+            _printers[index] = printer.copyWith(isConnected: true);
+            _selectedPrinter = _printers[index];
+          }
         });
       }
     } catch (e) {
@@ -147,6 +151,11 @@ class _MyAppState extends State<MyApp> {
                         value: printer,
                         child: Row(
                           children: [
+                            Icon(
+                              printer.type == PrinterType.bluethoot ? Icons.bluetooth : Icons.usb,
+                              color: printer.type == PrinterType.bluethoot ? (printer.isConnected ? Colors.blue : Colors.grey) : Colors.black,
+                            ),
+                            const SizedBox(width: 8),
                             Text(printer.name),
                             if (printer.type == PrinterType.bluethoot)
                               Text(

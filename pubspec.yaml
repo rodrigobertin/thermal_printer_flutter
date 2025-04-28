@@ -15,6 +15,7 @@ dependencies:
   web: ^0.5.1
   plugin_platform_interface: ^2.0.2
   win_ble: ^1.1.1
+  flutter_blue_plus: ^1.31.3
 
 dev_dependencies:
   flutter_test:
@@ -83,3 +84,5 @@ flutter:
   #
   # For details regarding fonts in packages, see
   # https://flutter.dev/to/font-from-package
+
+  uses-material-design: true

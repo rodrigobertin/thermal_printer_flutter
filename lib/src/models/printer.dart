@@ -62,4 +62,22 @@ class Printer {
   String toJson() => json.encode(toMap());
 
   factory Printer.fromJson(String source) => Printer.fromMap(json.decode(source));
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is Printer &&
+        other.name == name &&
+        other.ip == ip &&
+        other.port == port &&
+        other.bleAddress == bleAddress &&
+        other.type == type &&
+        other.isConnected == isConnected;
+  }
+
+  @override
+  int get hashCode {
+    return name.hashCode ^ ip.hashCode ^ port.hashCode ^ bleAddress.hashCode ^ type.hashCode ^ isConnected.hashCode;
+  }
 }

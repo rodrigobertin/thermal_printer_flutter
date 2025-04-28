@@ -4,6 +4,7 @@ import 'dart:developer';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:thermal_printer_flutter/src/helpers/platform.dart';
+import 'package:thermal_printer_flutter/src/mobile_ble.dart';
 import 'package:thermal_printer_flutter/src/win_ble.dart';
 import 'package:thermal_printer_flutter/thermal_printer_flutter.dart';
 import 'thermal_printer_flutter_platform_interface.dart';
@@ -22,11 +23,6 @@ class MethodChannelThermalPrinterFlutter implements ThermalPrinterFlutterPlatfor
 
   @override
   Future<List<Printer>> getPrinters({required PrinterType printerType}) async {
-    if (!isWindows) {
-      _logPlatformNotSuported();
-      return [];
-    }
-
     if (printerType == PrinterType.usb) {
       try {
         final List<dynamic>? printers = await methodChannel.invokeMethod<List<dynamic>>('getPrinters');
@@ -38,7 +34,14 @@ class MethodChannelThermalPrinterFlutter implements ThermalPrinterFlutterPlatfor
       }
     } else if (printerType == PrinterType.bluethoot) {
       try {
-        return await WinBleManager.instance.scanPrinters();
+        if (isWindows) {
+          return await WinBleManager.instance.scanPrinters();
+        } else if (isAndroid || isIOS || isMacOS) {
+          return await MobileBleManager.instance.scanPrinters();
+        } else {
+          _logPlatformNotSuported();
+          return [];
+        }
       } catch (e) {
         log('Erro ao buscar impressoras Bluetooth: $e', name: 'THERMAL_PRINTER_FLUTTER');
         return [];
@@ -50,7 +53,7 @@ class MethodChannelThermalPrinterFlutter implements ThermalPrinterFlutterPlatfor
 
   @override
   Future<void> printBytes({required List<int> bytes, required Printer printer}) async {
-    if (isWindows && printer.type == PrinterType.usb) {
+    if (printer.type == PrinterType.usb) {
       try {
         final bool result = await methodChannel.invokeMethod<bool>(
               'printBytes',
@@ -67,9 +70,15 @@ class MethodChannelThermalPrinterFlutter implements ThermalPrinterFlutterPlatfor
         log('Erro ao imprimir: $e', name: 'THERMAL_PRINTER_FLUTTER');
         rethrow;
       }
-    } else if (isWindows && printer.type == PrinterType.bluethoot) {
+    } else if (printer.type == PrinterType.bluethoot) {
       try {
-        await WinBleManager.instance.printBytes(bytes: bytes, address: printer.bleAddress);
+        if (isWindows) {
+          await WinBleManager.instance.printBytes(bytes: bytes, address: printer.bleAddress);
+        } else if (isAndroid || isIOS || isMacOS) {
+          await MobileBleManager.instance.printBytes(bytes: bytes, address: printer.bleAddress);
+        } else {
+          _logPlatformNotSuported();
+        }
       } catch (e) {
         log('Erro ao imprimir via Bluetooth: $e', name: 'THERMAL_PRINTER_FLUTTER');
         rethrow;
@@ -79,12 +88,17 @@ class MethodChannelThermalPrinterFlutter implements ThermalPrinterFlutterPlatfor
 
   @override
   Future<bool> connect({required Printer printer}) async {
-    if (isWindows) {
-      return await WinBleManager.instance.connect(printer.bleAddress);
-    } else {
-      _logPlatformNotSuported();
-      return false;
+    if (printer.type == PrinterType.bluethoot) {
+      if (isWindows) {
+        return await WinBleManager.instance.connect(printer.bleAddress);
+      } else if (isAndroid || isIOS || isMacOS) {
+        return await MobileBleManager.instance.connect(printer);
+      } else {
+        _logPlatformNotSuported();
+        return false;
+      }
     }
+    return false;
   }
 
   void _logPlatformNotSuported() {
