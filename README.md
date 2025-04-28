@@ -2,16 +2,16 @@
 
 Flutter plugin for thermal printing with support for multiple platforms and connection types.
 
-## Platforms
+## Support Table
 
 | Platform   | USB | Bluetooth | Network |
 |------------|-----|-----------|---------|
 | Android    | ❌  | ✅        | ✅      |
 | iOS        | ❌  | ✅        | ✅      |
 | macOS      | ❌  | ✅        | ✅      |
-| Windows    | ✅  | 🚧      | ✅      |
+| Windows    | ✅  | ✅        | ✅      |
 | Linux      | ❌  | ❌        | ✅      |
-| Web        | ❌  | ❌        | 🚧      |
+| Web        | ❌  | ❌        | ✅      |
 
 ## Project Setup
 
@@ -105,20 +105,48 @@ Flutter plugin for thermal printing with support for multiple platforms and conn
 
 ```dart
 import 'package:thermal_printer_flutter/thermal_printer_flutter.dart';
+//⚠️ Use a library based on esc_pos_utils to generate the print bytes
+import 'package:esc_pos_utils/esc_pos_utils.dart';
 
 // Create an instance of the plugin
 final thermalPrinter = ThermalPrinterFlutter();
+Printer? _selectedPrinter;
 
-// Search for printers
+// Only Android, Ios, Macos
 final bluetoothPrinters = await thermalPrinter.getPrinters(printerType: PrinterType.bluethoot);
+// Only Windows 
 final usbPrinters = await thermalPrinter.getPrinters(printerType: PrinterType.usb);
-final networkPrinters = await thermalPrinter.getPrinters(printerType: PrinterType.network);
 
-// Connect to a printer
+
+// Connect to a printer only bluethoot
 final connected = await thermalPrinter.connect(printer: selectedPrinter);
 
-// Print
-await thermalPrinter.printBytes(bytes: bytes, printer: selectedPrinter);
+
+ Future<void> _printTest({required ThermalPrinterFlutter termalPrinter,  required Printer printer}) async {
+    try {
+      final generator = Generator(PaperSize.mm80, await CapabilityProfile.load());
+      List<int> bytes = [];
+
+      bytes += generator.text('Print Test',
+          styles: const PosStyles(
+            align: PosAlign.center,
+            bold: true,
+            height: PosTextSize.size2,
+            width: PosTextSize.size2,
+          ));
+      bytes += generator.feed(2);
+      bytes += generator.text('Date: ${DateTime.now()}');
+      bytes += generator.feed(2);
+      bytes += generator.text('This is a test print');
+      bytes += generator.feed(2);
+      bytes += generator.cut();
+
+      await termalPrinter.printBytes(bytes: bytes, printer: printer);
+     
+    } catch (e) {
+      print('Error printing: $e');
+    }
+  }
 ```
 
 ## Example
