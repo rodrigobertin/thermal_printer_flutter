@@ -73,7 +73,7 @@ class _MyAppState extends State<MyApp> {
         }
       });
     } catch (e) {
-      print('Erro ao carregar impressoras: $e');
+      print('Error loading printers: $e');
     } finally {
       setState(() => _isLoading = false);
     }
@@ -97,7 +97,7 @@ class _MyAppState extends State<MyApp> {
         });
       }
     } catch (e) {
-      print('Erro ao conectar impressora: $e');
+      print('Error connecting printer: $e');
     } finally {
       setState(() => _isConnecting = false);
     }
@@ -108,7 +108,7 @@ class _MyAppState extends State<MyApp> {
 
     final printer = Printer(
       type: PrinterType.network,
-      name: 'Impressora de Rede (${_ipController.text})',
+      name: 'Network Printer (${_ipController.text})',
       ip: _ipController.text,
       port: _portController.text,
     );
@@ -129,7 +129,7 @@ class _MyAppState extends State<MyApp> {
       final generator = Generator(PaperSize.mm80, await CapabilityProfile.load());
       List<int> bytes = [];
 
-      bytes += generator.text('Teste de impressão',
+      bytes += generator.text('Print Test',
           styles: const PosStyles(
             align: PosAlign.center,
             bold: true,
@@ -137,15 +137,15 @@ class _MyAppState extends State<MyApp> {
             width: PosTextSize.size2,
           ));
       bytes += generator.feed(2);
-      bytes += generator.text('Data: ${DateTime.now()}');
+      bytes += generator.text('Date: ${DateTime.now()}');
       bytes += generator.feed(2);
-      bytes += generator.text('Esta é uma impressão de teste');
+      bytes += generator.text('This is a test print');
       bytes += generator.feed(2);
       bytes += generator.cut();
 
       await _thermalPrinterFlutterPlugin.printBytes(bytes: bytes, printer: _selectedPrinter!);
     } catch (e) {
-      print('Erro ao imprimir: $e');
+      print('Error printing: $e');
     }
   }
 
@@ -154,7 +154,7 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       home: Scaffold(
         appBar: AppBar(
-          title: const Text('Plugin example app'),
+          title: const Text('Thermal Printer Example'),
         ),
         body: Center(
           child: Padding(
@@ -170,7 +170,7 @@ class _MyAppState extends State<MyApp> {
                       child: TextField(
                         controller: _ipController,
                         decoration: const InputDecoration(
-                          labelText: 'IP da Impressora',
+                          labelText: 'Printer IP',
                           hintText: '192.168.1.100',
                         ),
                         keyboardType: TextInputType.number,
@@ -182,7 +182,7 @@ class _MyAppState extends State<MyApp> {
                       child: TextField(
                         controller: _portController,
                         decoration: const InputDecoration(
-                          labelText: 'Porta',
+                          labelText: 'Port',
                         ),
                         keyboardType: TextInputType.number,
                       ),
@@ -190,20 +190,20 @@ class _MyAppState extends State<MyApp> {
                     const SizedBox(width: 8),
                     ElevatedButton(
                       onPressed: _addNetworkPrinter,
-                      child: const Text('Adicionar'),
+                      child: const Text('Add'),
                     ),
                   ],
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton(
                   onPressed: _loadPrinters,
-                  child: const Text('Carregar Impressoras'),
+                  child: const Text('Load Printers'),
                 ),
                 const SizedBox(height: 20),
                 if (_isLoading)
                   const CircularProgressIndicator()
                 else if (_printers.isNotEmpty) ...[
-                  const Text('Selecione uma impressora:'),
+                  const Text('Select a printer:'),
                   const SizedBox(height: 10),
                   DropdownButton<Printer>(
                     value: _selectedPrinter,
@@ -228,7 +228,7 @@ class _MyAppState extends State<MyApp> {
                             Text(printer.name),
                             if (printer.type == PrinterType.bluethoot || printer.type == PrinterType.network)
                               Text(
-                                printer.isConnected ? ' (Conectada)' : ' (Desconectada)',
+                                printer.isConnected ? ' (Connected)' : ' (Disconnected)',
                                 style: TextStyle(
                                   color: printer.isConnected ? Colors.green : Colors.red,
                                 ),
@@ -254,7 +254,7 @@ class _MyAppState extends State<MyApp> {
                   else
                     ElevatedButton(
                       onPressed: _printTest,
-                      child: const Text('Imprimir Teste'),
+                      child: const Text('Print Test'),
                     ),
                 ],
               ],

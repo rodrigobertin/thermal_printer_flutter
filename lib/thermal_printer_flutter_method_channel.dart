@@ -30,7 +30,7 @@ class MethodChannelThermalPrinterFlutter implements ThermalPrinterFlutterPlatfor
         final List<String> resultWin = printers?.cast<String>() ?? [];
         return resultWin.map((p) => Printer(type: PrinterType.usb, name: p)).toList();
       } catch (e) {
-        log('Erro ao buscar impressoras USB: $e', name: 'THERMAL_PRINTER_FLUTTER');
+        log('Error getting USB printers: $e', name: 'THERMAL_PRINTER_FLUTTER');
         return [];
       }
     } else if (printerType == PrinterType.bluethoot) {
@@ -44,11 +44,11 @@ class MethodChannelThermalPrinterFlutter implements ThermalPrinterFlutterPlatfor
           return [];
         }
       } catch (e) {
-        log('Erro ao buscar impressoras Bluetooth: $e', name: 'THERMAL_PRINTER_FLUTTER');
+        log('Error getting Bluetooth printers: $e', name: 'THERMAL_PRINTER_FLUTTER');
         return [];
       }
     } else if (printerType == PrinterType.network) {
-      // Para impressoras de rede, o usuário precisa fornecer o IP e porta manualmente
+      // For network printers, the user needs to provide IP and port manually
       return [];
     }
 
@@ -68,10 +68,10 @@ class MethodChannelThermalPrinterFlutter implements ThermalPrinterFlutterPlatfor
             ) ??
             false;
         if (!result) {
-          log('Falha ao imprimir bytes', name: 'THERMAL_PRINTER_FLUTTER');
+          log('Failed to print bytes', name: 'THERMAL_PRINTER_FLUTTER');
         }
       } catch (e) {
-        log('Erro ao imprimir: $e', name: 'THERMAL_PRINTER_FLUTTER');
+        log('Error printing: $e', name: 'THERMAL_PRINTER_FLUTTER');
         rethrow;
       }
     } else if (printer.type == PrinterType.bluethoot) {
@@ -84,7 +84,7 @@ class MethodChannelThermalPrinterFlutter implements ThermalPrinterFlutterPlatfor
           _logPlatformNotSuported();
         }
       } catch (e) {
-        log('Erro ao imprimir via Bluetooth: $e', name: 'THERMAL_PRINTER_FLUTTER');
+        log('Error printing via Bluetooth: $e', name: 'THERMAL_PRINTER_FLUTTER');
         rethrow;
       }
     } else if (printer.type == PrinterType.network) {
@@ -95,10 +95,10 @@ class MethodChannelThermalPrinterFlutter implements ThermalPrinterFlutterPlatfor
         );
         final success = await networkPrinter.printBytes(bytes);
         if (!success) {
-          log('Falha ao imprimir via rede', name: 'THERMAL_PRINTER_FLUTTER');
+          log('Failed to print via network', name: 'THERMAL_PRINTER_FLUTTER');
         }
       } catch (e) {
-        log('Erro ao imprimir via rede: $e', name: 'THERMAL_PRINTER_FLUTTER');
+        log('Error printing via network: $e', name: 'THERMAL_PRINTER_FLUTTER');
         rethrow;
       }
     }
@@ -123,7 +123,7 @@ class MethodChannelThermalPrinterFlutter implements ThermalPrinterFlutterPlatfor
         );
         return await networkPrinter.connect();
       } catch (e) {
-        log('Erro ao conectar impressora de rede: $e', name: 'THERMAL_PRINTER_FLUTTER');
+        log('Error connecting network printer: $e', name: 'THERMAL_PRINTER_FLUTTER');
         return false;
       }
     }
@@ -131,6 +131,6 @@ class MethodChannelThermalPrinterFlutter implements ThermalPrinterFlutterPlatfor
   }
 
   void _logPlatformNotSuported() {
-    log('Plataforma não suportada', name: 'THERMAL_PRINTER_FLUTTER');
+    log('Platform not supported', name: 'THERMAL_PRINTER_FLUTTER');
   }
 }

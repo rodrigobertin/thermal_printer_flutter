@@ -25,7 +25,7 @@ class NetworkPrinter {
       _isConnected = true;
       return true;
     } catch (e) {
-      log('Erro ao conectar com impressora de rede: $e');
+      log('Error connecting to network printer: $e');
       _isConnected = false;
       return false;
     }
@@ -47,7 +47,7 @@ class NetworkPrinter {
 
       return true;
     } catch (e) {
-      log('Erro ao imprimir via rede: $e');
+      log('Error printing via network: $e');
       return false;
     }
   }
@@ -58,7 +58,7 @@ class NetworkPrinter {
       await _socket.close();
       _isConnected = false;
     } catch (e) {
-      log('Erro ao desconectar impressora de rede: $e');
+      log('Error disconnecting network printer: $e');
     }
   }
 

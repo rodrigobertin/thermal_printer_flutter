@@ -27,7 +27,7 @@ class MobileBleManager {
       await _scanSubscription?.cancel();
       await FlutterBluePlus.stopScan();
     } catch (e) {
-      log('Falha ao parar a busca por dispositivos: $e');
+      log('Failed to stop scanning for devices: $e');
     }
   }
 
@@ -45,7 +45,7 @@ class MobileBleManager {
       await stream.cancel();
       return isConnected;
     } catch (e) {
-      log('Falha ao conectar com o dispositivo: $e');
+      log('Failed to connect to device: $e');
       return false;
     }
   }
@@ -64,7 +64,7 @@ class MobileBleManager {
       final bt = BluetoothDevice.fromId(printer.bleAddress);
       await bt.disconnect();
     } catch (e) {
-      log('Falha ao desconectar o dispositivo: $e');
+      log('Failed to disconnect device: $e');
     }
   }
 
@@ -72,7 +72,7 @@ class MobileBleManager {
     try {
       final device = BluetoothDevice.fromId(address);
       if (!device.isConnected) {
-        log('Dispositivo não está conectado');
+        log('Device is not connected');
         return;
       }
 
@@ -90,7 +90,7 @@ class MobileBleManager {
       }
 
       if (writeCharacteristic == null) {
-        log('Nenhuma característica de escrita encontrada');
+        log('No write characteristic found');
         return;
       }
 
@@ -107,7 +107,7 @@ class MobileBleManager {
         );
       }
     } catch (e) {
-      log('Falha ao imprimir dados: $e');
+      log('Failed to print data: $e');
       rethrow;
     }
   }
@@ -125,7 +125,7 @@ class MobileBleManager {
       } else {
         final BluetoothAdapterState state = await FlutterBluePlus.adapterState.first;
         if (state == BluetoothAdapterState.off) {
-          log('Bluetooth está desligado, ligando...');
+          log('Bluetooth is off, turning on...');
           return [];
         }
       }
@@ -133,11 +133,11 @@ class MobileBleManager {
       await FlutterBluePlus.stopScan();
       await FlutterBluePlus.startScan();
 
-      // Obter dispositivos do sistema
+      // Get system devices
       final systemDevices = await _getSystemDevices();
       _devices.addAll(systemDevices);
 
-      // Obter dispositivos pareados (apenas Android)
+      // Get bonded devices (Android only)
       if (Platform.isAndroid) {
         final bondedDevices = await _getBondedDevices();
         _devices.addAll(bondedDevices);
@@ -145,7 +145,7 @@ class MobileBleManager {
 
       _sortDevices();
 
-      // Escutar resultados da busca
+      // Listen to scan results
       _scanSubscription = FlutterBluePlus.scanResults.listen((result) {
         final devices = result
             .map((e) => Printer(
@@ -164,7 +164,7 @@ class MobileBleManager {
 
       return _devices;
     } catch (e) {
-      log('Falha ao buscar impressoras: $e');
+      log('Failed to scan printers: $e');
       return [];
     }
   }
@@ -203,7 +203,7 @@ class MobileBleManager {
 
   void _sortDevices() {
     _devices.removeWhere((element) => element.name.isEmpty);
-    // Remover itens com o mesmo endereço
+    // Remove items with the same address
     final Set<String> seen = {};
     _devices.retainWhere((element) {
       if (seen.contains(element.bleAddress)) {
