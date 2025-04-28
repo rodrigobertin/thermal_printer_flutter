@@ -1,17 +1,17 @@
-# thermal_printer_flutter
+# THERMAL PRINTER FLUTTER
 
 Flutter plugin for thermal printing with support for multiple platforms and connection types.
 
-## Support Table
+## Support
 
 | Platform   | USB | Bluetooth | Network |
 |------------|-----|-----------|---------|
 | Android    | ❌  | ✅        | ✅      |
 | iOS        | ❌  | ✅        | ✅      |
 | macOS      | ❌  | ✅        | ✅      |
-| Windows    | ✅  | ✅        | ✅      |
+| Windows    | ✅  | 🚧        | ✅      |
 | Linux      | ❌  | ❌        | ✅      |
-| Web        | ❌  | ❌        | ✅      |
+| Web        | ❌  | ❌        | 🚧      |
 
 ## Project Setup
 
