@@ -1,5 +1,6 @@
 name: thermal_printer_flutter
-description: "A Flutter plugin for thermal printing supporting Bluetooth, USB, and Network printers
+description:
+  "A Flutter plugin for thermal printing supporting Bluetooth, USB, and Network printers
   across Android, iOS, macOS, Windows, Linux, and Web platforms. Easy to use and integrates
   with esc_pos_utils for generating ESC/POS print commands."
 homepage: "https://github.com/eduardohr-muniz/thermal_printer_flutter"
@@ -20,6 +21,8 @@ dependencies:
   plugin_platform_interface: ^2.0.2
   win_ble: ^1.1.1
   flutter_blue_plus: ^1.31.3
+  image: ^4.5.4
+  esc_pos_utils_plus: ^2.0.4
 
 dev_dependencies:
   flutter_test:

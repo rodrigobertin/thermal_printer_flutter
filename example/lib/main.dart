@@ -1,11 +1,13 @@
+import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:thermal_printer_flutter/thermal_printer_flutter.dart';
-import 'package:esc_pos_utils/esc_pos_utils.dart';
+import 'package:thermal_printer_flutter_example/src/order_widget.dart';
+import 'package:image/image.dart' as img;
 
 void main() {
-  runApp(const MyApp());
+  runApp(MaterialApp(home: const MyApp()));
 }
 
 class MyApp extends StatefulWidget {
@@ -63,11 +65,11 @@ class _MyAppState extends State<MyApp> {
     setState(() => _isLoading = true);
     try {
       final bluetoothPrinters = await _thermalPrinterFlutterPlugin.getPrinters(printerType: PrinterType.bluethoot);
-      // final usbPrinters = await _thermalPrinterFlutterPlugin.getPrinters(printerType: PrinterType.usb);
+      final usbPrinters = await _thermalPrinterFlutterPlugin.getPrinters(printerType: PrinterType.usb);
       // final networkPrinters = await _thermalPrinterFlutterPlugin.getPrinters(printerType: PrinterType.network);
 
       setState(() {
-        _printers = [...bluetoothPrinters];
+        _printers = [...bluetoothPrinters, ...usbPrinters];
         if (_printers.isNotEmpty) {
           _selectedPrinter = _printers[0];
         }
@@ -143,6 +145,16 @@ class _MyAppState extends State<MyApp> {
       bytes += generator.feed(2);
       bytes += generator.cut();
 
+      final image = await _thermalPrinterFlutterPlugin.screenShotWidget(
+        context,
+        widget: OrderWidget(),
+        pixelRatio: 5.0,
+      );
+
+      bytes += generator.imageRaster(image);
+
+      bytes += generator.feed(2);
+      bytes += generator.cut();
       await _thermalPrinterFlutterPlugin.printBytes(bytes: bytes, printer: _selectedPrinter!);
     } catch (e) {
       print('Error printing: $e');
