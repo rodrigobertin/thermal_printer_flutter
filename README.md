@@ -147,6 +147,16 @@ final connected = await thermalPrinter.connect(printer: selectedPrinter);
   }
 ```
 
+## Dependency Compatibility
+
+If you are using the packages below, we recommend using these specific versions for better compatibility:
+
+```yaml
+dependencies:
+  web: ^0.5.1
+  image: ^4.5.4
+```
+
 ## Example
 
 Check out the complete example at `example/lib/main.dart` for a sample implementation with a graphical interface.
