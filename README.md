@@ -4,14 +4,14 @@ Flutter plugin for thermal printing with support for multiple platforms and conn
 
 ## Support
 
-| Platform   | USB | Bluetooth | Network |
-|------------|-----|-----------|---------|
-| Android    | ❌  | ✅        | ✅      |
-| iOS        | ❌  | ✅        | ✅      |
-| macOS      | ❌  | ✅        | ✅      |
-| Windows    | ✅  | 🚧        | ✅      |
-| Linux      | ❌  | ❌        | ✅      |
-| Web        | ❌  | ❌        | 🚧      |
+| Platform | USB | Bluetooth | Network |
+| -------- | --- | --------- | ------- |
+| Android  | ❌  | ✅        | ✅      |
+| iOS      | ❌  | ✅        | ✅      |
+| macOS    | ❌  | ✅        | ✅      |
+| Windows  | ✅  | 🚧        | ✅      |
+| Linux    | ❌  | ❌        | ✅      |
+| Web      | ❌  | ❌        | 🚧      |
 
 ## Project Setup
 
@@ -93,9 +93,9 @@ Flutter plugin for thermal printing with support for multiple platforms and conn
 
 ```html
 <script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('flutter-first-frame', function () {
-      navigator.serviceWorker.register('flutter_service_worker.js');
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("flutter-first-frame", function () {
+      navigator.serviceWorker.register("flutter_service_worker.js");
     });
   }
 </script>
@@ -105,8 +105,6 @@ Flutter plugin for thermal printing with support for multiple platforms and conn
 
 ```dart
 import 'package:thermal_printer_flutter/thermal_printer_flutter.dart';
-//⚠️ Use a library based on esc_pos_utils to generate the print bytes
-import 'package:esc_pos_utils/esc_pos_utils.dart';
 
 // Create an instance of the plugin
 final thermalPrinter = ThermalPrinterFlutter();
@@ -114,7 +112,7 @@ Printer? _selectedPrinter;
 
 // Only Android, Ios, Macos
 final bluetoothPrinters = await thermalPrinter.getPrinters(printerType: PrinterType.bluethoot);
-// Only Windows 
+// Only Windows
 final usbPrinters = await thermalPrinter.getPrinters(printerType: PrinterType.usb);
 
 
@@ -142,7 +140,7 @@ final connected = await thermalPrinter.connect(printer: selectedPrinter);
       bytes += generator.cut();
 
       await termalPrinter.printBytes(bytes: bytes, printer: printer);
-     
+
     } catch (e) {
       print('Error printing: $e');
     }

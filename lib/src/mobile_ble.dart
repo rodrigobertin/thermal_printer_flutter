@@ -76,7 +76,7 @@ class MobileBleManager {
         return;
       }
 
-      final services = (await device.discoverServices()).skipWhile((value) => value.characteristics.where((element) => element.properties.write).isEmpty);
+      final services = (await device.discoverServices()).where((s) => s.characteristics.any((c) => c.properties.write));
 
       BluetoothCharacteristic? writeCharacteristic;
       for (var service in services) {
@@ -86,6 +86,7 @@ class MobileBleManager {
             break;
           }
         }
+        if (writeCharacteristic != null) break;
       }
 
       if (writeCharacteristic == null) {
@@ -93,17 +94,14 @@ class MobileBleManager {
         return;
       }
 
-      const maxChunkSize = 512;
+      const maxChunkSize = 200;
       for (var i = 0; i < bytes.length; i += maxChunkSize) {
         final chunk = bytes.sublist(
           i,
           i + maxChunkSize > bytes.length ? bytes.length : i + maxChunkSize,
         );
 
-        await writeCharacteristic.write(
-          Uint8List.fromList(chunk),
-          withoutResponse: true,
-        );
+        await writeCharacteristic.write(Uint8List.fromList(chunk));
       }
     } catch (e) {
       log('Failed to print data: $e');
@@ -167,7 +165,6 @@ class MobileBleManager {
         await FlutterBluePlus.stopScan();
         await FlutterBluePlus.startScan(
           timeout: const Duration(seconds: 5),
-          androidScanMode: AndroidScanMode.lowLatency,
         );
 
         // Listen to scan results

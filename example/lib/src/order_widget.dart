@@ -39,7 +39,7 @@ class OrderWidget extends StatelessWidget {
             _buildItem('Batata Média', 1, 8.50),
             _buildItem('Refrigerante 350ml', 2, 6.00),
             _buildItem('Açaí 300ml', 1, 12.00),
-            ...List.generate(50, (i) => _buildItem('Açaí 300ml', 1, 12.00)),
+            ...List.generate(1, (i) => _buildItem('Açaí 300ml', 1, 12.00)),
             const Divider(),
             const SizedBox(height: 8),
             _buildTotalRow('Subtotal', 62.50),

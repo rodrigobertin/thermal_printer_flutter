@@ -61,9 +61,7 @@ class ThermalScreenshot {
         final int newWidth = (width % 8 != 0) ? ((width ~/ 8) * 8) : width;
 
         // Conversão direta para imagem monocromática
-        final monoImage = useBetterText
-            ? _convertTextOptimizedMonochrome(rgbaBytes, image.width, image.height, newWidth, threshold)
-            : _convertRgbaToMonochromeFast(rgbaBytes, image.width, image.height, newWidth, threshold);
+        final monoImage = useBetterText ? _convertTextOptimizedMonochrome(rgbaBytes, image.width, image.height, newWidth, threshold) : _convertRgbaToMonochromeFast(rgbaBytes, image.width, image.height, newWidth, threshold);
 
         image.dispose();
         log('Screen shot time: ${stopwatch.elapsedMilliseconds}ms', name: 'THERMAL_PRINTER_FLUTTER');
@@ -134,9 +132,7 @@ class ThermalScreenshot {
     final current = (rgbaBytes[(y * width + x) * 4] + rgbaBytes[(y * width + x) * 4 + 1] + rgbaBytes[(y * width + x) * 4 + 2]) / 3;
 
     // Compara com pixels vizinhos
-    final right = x < width - 1
-        ? (rgbaBytes[(y * width + x + 1) * 4] + rgbaBytes[(y * width + x + 1) * 4 + 1] + rgbaBytes[(y * width + x + 1) * 4 + 2]) / 3
-        : current;
+    final right = x < width - 1 ? (rgbaBytes[(y * width + x + 1) * 4] + rgbaBytes[(y * width + x + 1) * 4 + 1] + rgbaBytes[(y * width + x + 1) * 4 + 2]) / 3 : current;
 
     final diff = (current - right).abs();
     return diff > 50; // Limiar para considerar como borda de texto

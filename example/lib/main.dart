@@ -1,10 +1,8 @@
-import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:thermal_printer_flutter/thermal_printer_flutter.dart';
 import 'package:thermal_printer_flutter_example/src/order_widget.dart';
-import 'package:image/image.dart' as img;
 
 void main() {
   runApp(MaterialApp(home: const MyApp()));
@@ -66,10 +64,12 @@ class _MyAppState extends State<MyApp> {
     try {
       final bluetoothPrinters = await _thermalPrinterFlutterPlugin.getPrinters(printerType: PrinterType.bluethoot);
       final usbPrinters = await _thermalPrinterFlutterPlugin.getPrinters(printerType: PrinterType.usb);
-      // final networkPrinters = await _thermalPrinterFlutterPlugin.getPrinters(printerType: PrinterType.network);
 
       setState(() {
-        _printers = [...bluetoothPrinters, ...usbPrinters];
+        _printers = [
+          ...bluetoothPrinters,
+          ...usbPrinters
+        ];
         if (_printers.isNotEmpty) {
           _selectedPrinter = _printers[0];
         }
@@ -89,9 +89,7 @@ class _MyAppState extends State<MyApp> {
       final connected = await _thermalPrinterFlutterPlugin.connect(printer: printer);
       if (connected) {
         setState(() {
-          final index = _printers.indexWhere((p) =>
-              (p.type == PrinterType.bluethoot && p.bleAddress == printer.bleAddress) ||
-              (p.type == PrinterType.network && p.ip == printer.ip && p.port == printer.port));
+          final index = _printers.indexWhere((p) => (p.type == PrinterType.bluethoot && p.bleAddress == printer.bleAddress) || (p.type == PrinterType.network && p.ip == printer.ip && p.port == printer.port));
           if (index != -1) {
             _printers[index] = printer.copyWith(isConnected: true);
             _selectedPrinter = _printers[index];
@@ -130,7 +128,7 @@ class _MyAppState extends State<MyApp> {
     try {
       final generator = Generator(PaperSize.mm80, await CapabilityProfile.load());
       List<int> bytes = [];
-
+      bytes += generator.reset();
       bytes += generator.text('Print Test',
           styles: const PosStyles(
             align: PosAlign.center,
