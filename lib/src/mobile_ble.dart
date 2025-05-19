@@ -3,6 +3,7 @@ import 'dart:developer';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:thermal_printer_flutter/src/models/configuration.dart';
 import 'package:thermal_printer_flutter/thermal_printer_flutter.dart';
 
 class MobileBleManager {
@@ -68,7 +69,8 @@ class MobileBleManager {
     }
   }
 
-  Future<void> printBytes({required List<int> bytes, required String address}) async {
+  Future<void> printBytes({required List<int> bytes, required String address, Configuration? configuration}) async {
+    final conf = configuration ?? Configuration();
     try {
       final device = BluetoothDevice.fromId(address);
       if (!device.isConnected) {
@@ -94,7 +96,7 @@ class MobileBleManager {
         return;
       }
 
-      const maxChunkSize = 200;
+      final maxChunkSize = conf.bluetoothMaxChunkSize;
       for (var i = 0; i < bytes.length; i += maxChunkSize) {
         final chunk = bytes.sublist(
           i,

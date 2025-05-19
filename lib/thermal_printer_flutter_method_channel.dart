@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:thermal_printer_flutter/src/helpers/platform.dart';
 import 'package:thermal_printer_flutter/src/mobile_ble.dart';
+import 'package:thermal_printer_flutter/src/models/configuration.dart';
 import 'package:thermal_printer_flutter/src/network_printer.dart';
 import 'package:thermal_printer_flutter/src/win_ble.dart';
 import 'package:thermal_printer_flutter/thermal_printer_flutter.dart';
@@ -56,7 +57,7 @@ class MethodChannelThermalPrinterFlutter implements ThermalPrinterFlutterPlatfor
   }
 
   @override
-  Future<void> printBytes({required List<int> bytes, required Printer printer}) async {
+  Future<void> printBytes({required List<int> bytes, required Printer printer, Configuration? configuration}) async {
     if (printer.type == PrinterType.usb) {
       try {
         final bool result = await methodChannel.invokeMethod<bool>(
@@ -77,9 +78,12 @@ class MethodChannelThermalPrinterFlutter implements ThermalPrinterFlutterPlatfor
     } else if (printer.type == PrinterType.bluethoot) {
       try {
         if (isWindows) {
-          await WinBleManager.instance.printBytes(bytes: bytes, address: printer.bleAddress);
+          await WinBleManager.instance.printBytes(
+            bytes: bytes,
+            address: printer.bleAddress,
+          );
         } else if (isAndroid || isIOS || isMacOS) {
-          await MobileBleManager.instance.printBytes(bytes: bytes, address: printer.bleAddress);
+          await MobileBleManager.instance.printBytes(bytes: bytes, address: printer.bleAddress, configuration: configuration ?? Configuration());
         } else {
           _logPlatformNotSuported();
         }

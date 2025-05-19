@@ -153,7 +153,7 @@ class WinBleManager {
     try {
       // Converte a lista de inteiros para bytes
 
-      await WinBle.write(address: address, data: Uint8List.fromList(bytes), service: '', characteristic: '', writeWithResponse: false);
+      await WinBle.write(address: address, data: Uint8List.fromList(bytes), service: '', characteristic: '', writeWithResponse: false,);
     } catch (e) {
       log('Erro ao imprimir: $e', name: 'THERMAL_PRINTER_FLUTTER');
       rethrow;

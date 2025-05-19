@@ -38,6 +38,7 @@ class _MyAppState extends State<MyApp> {
     super.dispose();
   }
 
+  String _bluethotMaxChunks = '244';
   // Platform messages are asynchronous, so we initialize in an async method.
   Future<void> initPlatformState() async {
     String platformVersion;
@@ -66,10 +67,7 @@ class _MyAppState extends State<MyApp> {
       final usbPrinters = await _thermalPrinterFlutterPlugin.getPrinters(printerType: PrinterType.usb);
 
       setState(() {
-        _printers = [
-          ...bluetoothPrinters,
-          ...usbPrinters
-        ];
+        _printers = [...bluetoothPrinters, ...usbPrinters];
         if (_printers.isNotEmpty) {
           _selectedPrinter = _printers[0];
         }
@@ -153,7 +151,7 @@ class _MyAppState extends State<MyApp> {
 
       bytes += generator.feed(2);
       bytes += generator.cut();
-      await _thermalPrinterFlutterPlugin.printBytes(bytes: bytes, printer: _selectedPrinter!);
+      await _thermalPrinterFlutterPlugin.printBytes(bytes: bytes, printer: _selectedPrinter!, configuration: Configuration(bluetoothMaxChunkSize: int.tryParse(_bluethotMaxChunks) ?? 100));
     } catch (e) {
       print('Error printing: $e');
     }
@@ -258,6 +256,14 @@ class _MyAppState extends State<MyApp> {
                       }
                     },
                   ),
+                  if (!_isConnecting)
+                    TextFormField(
+                      initialValue: _bluethotMaxChunks,
+                      onChanged: (value) => _bluethotMaxChunks = value,
+                      decoration: const InputDecoration(
+                        label: Text('Bluetooth Max Chunks'),
+                      ),
+                    ),
                   const SizedBox(height: 20),
                   if (_isConnecting)
                     const CircularProgressIndicator()
