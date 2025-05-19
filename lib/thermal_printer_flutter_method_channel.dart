@@ -3,11 +3,6 @@ import 'dart:developer';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:thermal_printer_flutter/src/helpers/platform.dart';
-import 'package:thermal_printer_flutter/src/mobile_ble.dart';
-import 'package:thermal_printer_flutter/src/models/configuration.dart';
-import 'package:thermal_printer_flutter/src/network_printer.dart';
-import 'package:thermal_printer_flutter/src/win_ble.dart';
 import 'package:thermal_printer_flutter/thermal_printer_flutter.dart';
 import 'thermal_printer_flutter_platform_interface.dart';
 
@@ -36,20 +31,22 @@ class MethodChannelThermalPrinterFlutter implements ThermalPrinterFlutterPlatfor
       }
     } else if (printerType == PrinterType.bluethoot) {
       try {
-        if (isWindows) {
-          return await WinBleManager.instance.scanPrinters();
-        } else if (isAndroid || isIOS || isMacOS) {
-          return await MobileBleManager.instance.scanPrinters();
-        } else {
-          _logPlatformNotSuported();
-          return [];
-        }
+        final List<dynamic>? devices = await methodChannel.invokeMethod<List<dynamic>>('pairedbluetooths');
+        return devices?.map((d) {
+              final parts = d.split('#');
+              return Printer(
+                type: PrinterType.bluethoot,
+                name: parts[0],
+                bleAddress: parts[1],
+              );
+            }).toList() ??
+            [];
       } catch (e) {
         log('Error getting Bluetooth printers: $e', name: 'THERMAL_PRINTER_FLUTTER');
         return [];
       }
     } else if (printerType == PrinterType.network) {
-      // For network printers, the user needs to provide IP and port manually
+      // Para impressoras de rede, o usuário precisa fornecer IP e porta manualmente
       return [];
     }
 
@@ -57,7 +54,7 @@ class MethodChannelThermalPrinterFlutter implements ThermalPrinterFlutterPlatfor
   }
 
   @override
-  Future<void> printBytes({required List<int> bytes, required Printer printer, Configuration? configuration}) async {
+  Future<void> printBytes({required List<int> bytes, required Printer printer}) async {
     if (printer.type == PrinterType.usb) {
       try {
         final bool result = await methodChannel.invokeMethod<bool>(
@@ -77,15 +74,14 @@ class MethodChannelThermalPrinterFlutter implements ThermalPrinterFlutterPlatfor
       }
     } else if (printer.type == PrinterType.bluethoot) {
       try {
-        if (isWindows) {
-          await WinBleManager.instance.printBytes(
-            bytes: bytes,
-            address: printer.bleAddress,
-          );
-        } else if (isAndroid || isIOS || isMacOS) {
-          await MobileBleManager.instance.printBytes(bytes: bytes, address: printer.bleAddress, configuration: configuration ?? Configuration());
-        } else {
-          _logPlatformNotSuported();
+        final bool result = await methodChannel.invokeMethod<bool>(
+              'writebytes',
+              bytes,
+            ) ??
+            false;
+
+        if (!result) {
+          log('Failed to print via Bluetooth', name: 'THERMAL_PRINTER_FLUTTER');
         }
       } catch (e) {
         log('Error printing via Bluetooth: $e', name: 'THERMAL_PRINTER_FLUTTER');
@@ -93,12 +89,17 @@ class MethodChannelThermalPrinterFlutter implements ThermalPrinterFlutterPlatfor
       }
     } else if (printer.type == PrinterType.network) {
       try {
-        final networkPrinter = NetworkPrinter(
-          host: printer.ip,
-          port: int.tryParse(printer.port) ?? 9100,
-        );
-        final success = await networkPrinter.printBytes(bytes);
-        if (!success) {
+        final bool result = await methodChannel.invokeMethod<bool>(
+              'printNetworkBytes',
+              <String, dynamic>{
+                'bytes': bytes,
+                'ip': printer.ip,
+                'port': int.tryParse(printer.port) ?? 9100,
+              },
+            ) ??
+            false;
+
+        if (!result) {
           log('Failed to print via network', name: 'THERMAL_PRINTER_FLUTTER');
         }
       } catch (e) {
@@ -111,21 +112,28 @@ class MethodChannelThermalPrinterFlutter implements ThermalPrinterFlutterPlatfor
   @override
   Future<bool> connect({required Printer printer}) async {
     if (printer.type == PrinterType.bluethoot) {
-      if (isWindows) {
-        return await WinBleManager.instance.connect(printer.bleAddress);
-      } else if (isAndroid || isIOS || isMacOS) {
-        return await MobileBleManager.instance.connect(printer);
-      } else {
-        _logPlatformNotSuported();
+      try {
+        final bool result = await methodChannel.invokeMethod<bool>(
+              'connect',
+              printer.bleAddress,
+            ) ??
+            false;
+        return result;
+      } catch (e) {
+        log('Error connecting Bluetooth printer: $e', name: 'THERMAL_PRINTER_FLUTTER');
         return false;
       }
     } else if (printer.type == PrinterType.network) {
       try {
-        final networkPrinter = NetworkPrinter(
-          host: printer.ip,
-          port: int.tryParse(printer.port) ?? 9100,
-        );
-        return await networkPrinter.connect();
+        final bool result = await methodChannel.invokeMethod<bool>(
+              'connectNetwork',
+              <String, dynamic>{
+                'ip': printer.ip,
+                'port': int.tryParse(printer.port) ?? 9100,
+              },
+            ) ??
+            false;
+        return result;
       } catch (e) {
         log('Error connecting network printer: $e', name: 'THERMAL_PRINTER_FLUTTER');
         return false;
@@ -134,7 +142,20 @@ class MethodChannelThermalPrinterFlutter implements ThermalPrinterFlutterPlatfor
     return false;
   }
 
-  void _logPlatformNotSuported() {
-    log('Platform not supported', name: 'THERMAL_PRINTER_FLUTTER');
+  @override
+  Future<void> disconnect({required Printer printer}) async {
+    if (printer.type == PrinterType.bluethoot) {
+      try {
+        await methodChannel.invokeMethod('disconnect');
+      } catch (e) {
+        log('Error disconnecting Bluetooth printer: $e', name: 'THERMAL_PRINTER_FLUTTER');
+      }
+    } else if (printer.type == PrinterType.network) {
+      try {
+        await methodChannel.invokeMethod('disconnectNetwork');
+      } catch (e) {
+        log('Error disconnecting network printer: $e', name: 'THERMAL_PRINTER_FLUTTER');
+      }
+    }
   }
 }

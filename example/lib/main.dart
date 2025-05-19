@@ -151,7 +151,7 @@ class _MyAppState extends State<MyApp> {
 
       bytes += generator.feed(2);
       bytes += generator.cut();
-      await _thermalPrinterFlutterPlugin.printBytes(bytes: bytes, printer: _selectedPrinter!, configuration: Configuration(bluetoothMaxChunkSize: int.tryParse(_bluethotMaxChunks) ?? 100));
+      await _thermalPrinterFlutterPlugin.printBytes(bytes: bytes, printer: _selectedPrinter!);
     } catch (e) {
       print('Error printing: $e');
     }
