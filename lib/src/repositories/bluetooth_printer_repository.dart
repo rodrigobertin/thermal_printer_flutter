@@ -28,8 +28,6 @@ class BluetoothPrinterRepository implements PrinterRepository {
         }
         return Printer(
           type: PrinterType.bluethoot,
-          name: '',
-          bleAddress: '',
         );
       }).toList();
     } catch (e) {

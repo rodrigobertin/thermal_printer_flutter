@@ -8,7 +8,6 @@ export './src/enums/printer_type.dart';
 export './src/services/screent_shot.dart';
 import 'package:image/image.dart' as img;
 export 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
-import 'package:flutter/foundation.dart';
 
 class ThermalPrinterFlutter implements ThermalPrinterFlutterPlatform {
   @override
@@ -68,6 +67,13 @@ class ThermalPrinterFlutter implements ThermalPrinterFlutterPlatform {
     double textScaleFactor = 1.3,
   }) async {
     return await ThermalScreenshot.captureWidgetAsMonochromeImage(context,
-        widget: widget, flipHorizontal: flipHorizontal, pixelRatio: pixelRatio, threshold: threshold, width: width, applyTextScaling: applyTextScaling, useBetterText: useBetterText, textScaleFactor: textScaleFactor);
+        widget: widget,
+        flipHorizontal: flipHorizontal,
+        pixelRatio: pixelRatio,
+        threshold: threshold,
+        width: width,
+        applyTextScaling: applyTextScaling,
+        useBetterText: useBetterText,
+        textScaleFactor: textScaleFactor);
   }
 }

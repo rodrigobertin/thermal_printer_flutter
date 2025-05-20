@@ -1,3 +1,7 @@
+## 0.0.1+6
+
+- Improved printing performance via Bluetooth
+
 ## 0.0.1+5
 
 - Feature add textScaleFactor on Screenshot
