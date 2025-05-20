@@ -30,10 +30,6 @@ class ThermalPrinterFlutterPlugin : public flutter::Plugin {
  private:
   std::vector<std::string> GetPrinters();
   void PrintBytes(const std::vector<uint8_t>& bytes, const std::string& printerName);
-  std::vector<std::string> GetPairedBluetoothDevices();
-  bool ConnectBluetooth(const std::string& macAddress);
-  bool WriteBluetoothBytes(const std::vector<uint8_t>& bytes);
-  bool IsBluetoothConnected(const std::string& macAddress);
 };
 
 }  // namespace thermal_printer_flutter

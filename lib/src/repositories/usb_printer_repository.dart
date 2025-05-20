@@ -21,8 +21,6 @@ class UsbPrinterRepository implements PrinterRepository {
             }
             return Printer(
               type: PrinterType.usb,
-              name: '',
-              usbAddress: '',
             );
           }).toList() ??
           [];
@@ -48,7 +46,10 @@ class UsbPrinterRepository implements PrinterRepository {
     try {
       final bool result = await _channel.invokeMethod<bool>(
             'writebytes',
-            bytes,
+            <String, dynamic>{
+              'bytes': bytes,
+              'printerName': printer.name,
+            },
           ) ??
           false;
 

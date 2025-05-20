@@ -4,9 +4,6 @@
 #include <windows.h>
 #include <winspool.h>
 #include <VersionHelpers.h>
-#include <bluetoothapis.h>
-#include <ws2bth.h>
-#include <winsock2.h>
 
 // Inclusões do Flutter
 #include <flutter/method_channel.h>
@@ -17,7 +14,6 @@
 #include <sstream>
 #include <vector>
 #include <string>
-#include <map>
 
 namespace thermal_printer_flutter {
 
@@ -142,124 +138,12 @@ void ThermalPrinterFlutterPlugin::PrintBytes(const std::vector<uint8_t>& bytes, 
 }
 
 // =====================================================
-// Método para obter dispositivos Bluetooth pareados
-// =====================================================
-std::vector<std::string> ThermalPrinterFlutterPlugin::GetPairedBluetoothDevices() {
-  std::vector<std::string> devices;
-  
-  // Inicializa o Winsock
-  WSADATA wsaData;
-  if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-    return devices;
-  }
-
-  // Encontra o primeiro dispositivo Bluetooth
-  BLUETOOTH_DEVICE_SEARCH_PARAMS searchParams = { 0 };
-  searchParams.dwSize = sizeof(BLUETOOTH_DEVICE_SEARCH_PARAMS);
-  searchParams.fReturnAuthenticated = TRUE;
-  searchParams.fReturnRemembered = TRUE;
-  searchParams.fReturnUnknown = TRUE;
-  searchParams.fReturnConnected = TRUE;
-  searchParams.fIssueInquiry = TRUE;
-  searchParams.cTimeoutMultiplier = 5;
-
-  BLUETOOTH_DEVICE_INFO deviceInfo = { 0 };
-  deviceInfo.dwSize = sizeof(BLUETOOTH_DEVICE_INFO);
-
-  HBLUETOOTH_DEVICE_FIND hFind = BluetoothFindFirstDevice(&searchParams, &deviceInfo);
-  if (hFind != NULL) {
-    do {
-      // Converte o endereço MAC para string
-      char macStr[18];
-      sprintf_s(macStr, "%02X:%02X:%02X:%02X:%02X:%02X",
-        deviceInfo.Address.rgBytes[0], deviceInfo.Address.rgBytes[1],
-        deviceInfo.Address.rgBytes[2], deviceInfo.Address.rgBytes[3],
-        deviceInfo.Address.rgBytes[4], deviceInfo.Address.rgBytes[5]);
-
-      // Adiciona o dispositivo à lista (nome#mac)
-      std::string deviceStr = WideStringToString(deviceInfo.szName) + "#" + macStr;
-      devices.push_back(deviceStr);
-    } while (BluetoothFindNextDevice(hFind, &deviceInfo));
-
-    BluetoothFindDeviceClose(hFind);
-  }
-
-  WSACleanup();
-  return devices;
-}
-
-// =====================================================
-// Método para conectar a um dispositivo Bluetooth
-// =====================================================
-bool ThermalPrinterFlutterPlugin::ConnectBluetooth(const std::string& macAddress) {
-  // Implementação da conexão Bluetooth
-  // TODO: Implementar a lógica de conexão
-  return false;
-}
-
-// =====================================================
-// Método para escrever bytes via Bluetooth
-// =====================================================
-bool ThermalPrinterFlutterPlugin::WriteBluetoothBytes(const std::vector<uint8_t>& bytes) {
-  // Implementação da escrita via Bluetooth
-  // TODO: Implementar a lógica de escrita
-  return false;
-}
-
-// =====================================================
-// Método para verificar se está conectado via Bluetooth
-// =====================================================
-bool ThermalPrinterFlutterPlugin::IsBluetoothConnected(const std::string& macAddress) {
-  // Inicializa o Winsock
-  WSADATA wsaData;
-  if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-    return false;
-  }
-
-  // Encontra o primeiro dispositivo Bluetooth
-  BLUETOOTH_DEVICE_SEARCH_PARAMS searchParams = { 0 };
-  searchParams.dwSize = sizeof(BLUETOOTH_DEVICE_SEARCH_PARAMS);
-  searchParams.fReturnAuthenticated = TRUE;
-  searchParams.fReturnRemembered = TRUE;
-  searchParams.fReturnUnknown = TRUE;
-  searchParams.fReturnConnected = TRUE;
-  searchParams.fIssueInquiry = TRUE;
-  searchParams.cTimeoutMultiplier = 5;
-
-  BLUETOOTH_DEVICE_INFO deviceInfo = { 0 };
-  deviceInfo.dwSize = sizeof(BLUETOOTH_DEVICE_INFO);
-
-  HBLUETOOTH_DEVICE_FIND hFind = BluetoothFindFirstDevice(&searchParams, &deviceInfo);
-  if (hFind != NULL) {
-    do {
-      // Converte o endereço MAC para string
-      char macStr[18];
-      sprintf_s(macStr, "%02X:%02X:%02X:%02X:%02X:%02X",
-        deviceInfo.Address.rgBytes[0], deviceInfo.Address.rgBytes[1],
-        deviceInfo.Address.rgBytes[2], deviceInfo.Address.rgBytes[3],
-        deviceInfo.Address.rgBytes[4], deviceInfo.Address.rgBytes[5]);
-
-      // Verifica se é o dispositivo que estamos procurando
-      if (macStr == macAddress) {
-        BluetoothFindDeviceClose(hFind);
-        WSACleanup();
-        return deviceInfo.fConnected == TRUE;
-      }
-    } while (BluetoothFindNextDevice(hFind, &deviceInfo));
-
-    BluetoothFindDeviceClose(hFind);
-  }
-
-  WSACleanup();
-  return false;
-}
-
-// =====================================================
 // Método que gerencia as chamadas do Flutter
 // =====================================================
 void ThermalPrinterFlutterPlugin::HandleMethodCall(
     const flutter::MethodCall<flutter::EncodableValue> &method_call,
     std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
+  // Verifica qual método foi chamado
   if (method_call.method_name().compare("getPlatformVersion") == 0) {
     // Retorna a versão do Windows
     std::ostringstream version_stream;
@@ -272,15 +156,19 @@ void ThermalPrinterFlutterPlugin::HandleMethodCall(
       version_stream << "7";
     }
     result->Success(flutter::EncodableValue(version_stream.str()));
-  } else if (method_call.method_name().compare("getPrinters") == 0) {
-    // Retorna a lista de impressoras
+  } else if (method_call.method_name().compare("usbprinters") == 0) {
+    // Retorna a lista de impressoras USB
     auto printers = GetPrinters();
     flutter::EncodableList printerList;
     for (const auto& printer : printers) {
-      printerList.push_back(flutter::EncodableValue(printer));
+      flutter::EncodableMap printerMap;
+      printerMap[flutter::EncodableValue("name")] = flutter::EncodableValue(printer);
+      printerMap[flutter::EncodableValue("type")] = flutter::EncodableValue("usb");
+      printerMap[flutter::EncodableValue("isConnected")] = flutter::EncodableValue(true);
+      printerList.push_back(flutter::EncodableValue(printerMap));
     }
     result->Success(flutter::EncodableValue(printerList));
-  } else if (method_call.method_name().compare("printBytes") == 0) {
+  } else if (method_call.method_name().compare("writebytes") == 0) {
     // Processa a impressão de bytes
     const auto* arguments = std::get_if<flutter::EncodableMap>(method_call.arguments());
     if (arguments) {
@@ -313,48 +201,6 @@ void ThermalPrinterFlutterPlugin::HandleMethodCall(
       }
     }
     result->Error("invalid_arguments", "Invalid arguments for printBytes");
-  } else if (method_call.method_name().compare("pairedbluetooths") == 0) {
-    auto devices = GetPairedBluetoothDevices();
-    flutter::EncodableList deviceList;
-    for (const auto& device : devices) {
-      deviceList.push_back(flutter::EncodableValue(device));
-    }
-    result->Success(flutter::EncodableValue(deviceList));
-  } else if (method_call.method_name().compare("connect") == 0) {
-    const auto* macAddress = std::get_if<std::string>(method_call.arguments());
-    if (macAddress) {
-      bool success = ConnectBluetooth(*macAddress);
-      result->Success(flutter::EncodableValue(success));
-    } else {
-      result->Error("invalid_argument", "MAC address is required");
-    }
-  } else if (method_call.method_name().compare("writebytes") == 0) {
-    const auto* bytes_list = std::get_if<flutter::EncodableList>(method_call.arguments());
-    if (bytes_list) {
-      std::vector<uint8_t> bytes;
-      bytes.reserve(bytes_list->size());
-      for (const auto& value : *bytes_list) {
-        const auto* int_value = std::get_if<int32_t>(&value);
-        if (int_value) {
-          bytes.push_back(static_cast<uint8_t>(*int_value));
-        }
-      }
-      bool success = WriteBluetoothBytes(bytes);
-      result->Success(flutter::EncodableValue(success));
-    } else {
-      result->Error("invalid_argument", "Bytes list is required");
-    }
-  } else if (method_call.method_name().compare("disconnect") == 0) {
-    // TODO: Implementar desconexão
-    result->Success(flutter::EncodableValue(true));
-  } else if (method_call.method_name().compare("isConnected") == 0) {
-    const auto* macAddress = std::get_if<std::string>(method_call.arguments());
-    if (macAddress) {
-      bool isConnected = IsBluetoothConnected(*macAddress);
-      result->Success(flutter::EncodableValue(isConnected));
-    } else {
-      result->Error("invalid_argument", "MAC address is required");
-    }
   } else {
     result->NotImplemented();
   }

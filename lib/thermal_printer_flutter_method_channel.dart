@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:thermal_printer_flutter/thermal_printer_flutter.dart';
 import 'package:thermal_printer_flutter/src/repositories/bluetooth_printer_repository.dart';
@@ -21,6 +22,9 @@ class MethodChannelThermalPrinterFlutter implements ThermalPrinterFlutterPlatfor
 
   @override
   Future<bool> checkBluetoothPermissions() async {
+    if (Platform.isWindows) {
+      throw UnimplementedError('Bluetooth is not supported on Windows');
+    }
     try {
       final bool result = await _channel.invokeMethod<bool>('checkBluetoothPermissions') ?? false;
       return result;
@@ -31,6 +35,9 @@ class MethodChannelThermalPrinterFlutter implements ThermalPrinterFlutterPlatfor
 
   @override
   Future<bool> isBluetoothEnabled() async {
+    if (Platform.isWindows) {
+      throw UnimplementedError('Bluetooth is not supported on Windows');
+    }
     try {
       final bool result = await _channel.invokeMethod<bool>('isBluetoothEnabled') ?? false;
       return result;
@@ -41,6 +48,9 @@ class MethodChannelThermalPrinterFlutter implements ThermalPrinterFlutterPlatfor
 
   @override
   Future<bool> enableBluetooth() async {
+    if (Platform.isWindows) {
+      throw UnimplementedError('Bluetooth is not supported on Windows');
+    }
     try {
       final bool result = await _channel.invokeMethod<bool>('enableBluetooth') ?? false;
       return result;
@@ -55,6 +65,9 @@ class MethodChannelThermalPrinterFlutter implements ThermalPrinterFlutterPlatfor
       case PrinterType.usb:
         return _usbRepository.getPrinters();
       case PrinterType.bluethoot:
+        if (Platform.isWindows) {
+          throw UnimplementedError('Bluetooth printing is not supported on Windows');
+        }
         return _bluetoothRepository.getPrinters();
       case PrinterType.network:
         return _networkRepository.getPrinters();
@@ -68,6 +81,9 @@ class MethodChannelThermalPrinterFlutter implements ThermalPrinterFlutterPlatfor
         await _usbRepository.printBytes(bytes: bytes, printer: printer);
         break;
       case PrinterType.bluethoot:
+        if (Platform.isWindows) {
+          throw UnimplementedError('Bluetooth printing is not supported on Windows');
+        }
         await _bluetoothRepository.printBytes(bytes: bytes, printer: printer);
         break;
       case PrinterType.network:
@@ -82,6 +98,9 @@ class MethodChannelThermalPrinterFlutter implements ThermalPrinterFlutterPlatfor
       case PrinterType.usb:
         return _usbRepository.connect(printer);
       case PrinterType.bluethoot:
+        if (Platform.isWindows) {
+          throw UnimplementedError('Bluetooth printing is not supported on Windows');
+        }
         return _bluetoothRepository.connect(printer);
       case PrinterType.network:
         return _networkRepository.connect(printer);
@@ -95,6 +114,9 @@ class MethodChannelThermalPrinterFlutter implements ThermalPrinterFlutterPlatfor
         await _usbRepository.disconnect(printer);
         break;
       case PrinterType.bluethoot:
+        if (Platform.isWindows) {
+          throw UnimplementedError('Bluetooth printing is not supported on Windows');
+        }
         await _bluetoothRepository.disconnect(printer);
         break;
       case PrinterType.network:
@@ -107,6 +129,9 @@ class MethodChannelThermalPrinterFlutter implements ThermalPrinterFlutterPlatfor
   Future<bool> isConnected({required Printer printer}) async {
     switch (printer.type) {
       case PrinterType.bluethoot:
+        if (Platform.isWindows) {
+          throw UnimplementedError('Bluetooth printing is not supported on Windows');
+        }
         return _bluetoothRepository.isConnected(printer);
       case PrinterType.usb:
         return _usbRepository.isConnected(printer);
