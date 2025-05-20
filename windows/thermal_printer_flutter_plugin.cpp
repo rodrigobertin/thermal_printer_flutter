@@ -207,6 +207,54 @@ bool ThermalPrinterFlutterPlugin::WriteBluetoothBytes(const std::vector<uint8_t>
 }
 
 // =====================================================
+// Método para verificar se está conectado via Bluetooth
+// =====================================================
+bool ThermalPrinterFlutterPlugin::IsBluetoothConnected(const std::string& macAddress) {
+  // Inicializa o Winsock
+  WSADATA wsaData;
+  if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+    return false;
+  }
+
+  // Encontra o primeiro dispositivo Bluetooth
+  BLUETOOTH_DEVICE_SEARCH_PARAMS searchParams = { 0 };
+  searchParams.dwSize = sizeof(BLUETOOTH_DEVICE_SEARCH_PARAMS);
+  searchParams.fReturnAuthenticated = TRUE;
+  searchParams.fReturnRemembered = TRUE;
+  searchParams.fReturnUnknown = TRUE;
+  searchParams.fReturnConnected = TRUE;
+  searchParams.fIssueInquiry = TRUE;
+  searchParams.cTimeoutMultiplier = 5;
+
+  BLUETOOTH_DEVICE_INFO deviceInfo = { 0 };
+  deviceInfo.dwSize = sizeof(BLUETOOTH_DEVICE_INFO);
+
+  HBLUETOOTH_DEVICE_FIND hFind = BluetoothFindFirstDevice(&searchParams, &deviceInfo);
+  if (hFind != NULL) {
+    do {
+      // Converte o endereço MAC para string
+      char macStr[18];
+      sprintf_s(macStr, "%02X:%02X:%02X:%02X:%02X:%02X",
+        deviceInfo.Address.rgBytes[0], deviceInfo.Address.rgBytes[1],
+        deviceInfo.Address.rgBytes[2], deviceInfo.Address.rgBytes[3],
+        deviceInfo.Address.rgBytes[4], deviceInfo.Address.rgBytes[5]);
+
+      // Verifica se é o dispositivo que estamos procurando
+      if (macStr == macAddress) {
+        BluetoothFindDeviceClose(hFind);
+        WSACleanup();
+        return deviceInfo.fConnected == TRUE;
+      }
+    } while (BluetoothFindNextDevice(hFind, &deviceInfo));
+
+    BluetoothFindDeviceClose(hFind);
+  }
+
+  WSACleanup();
+  return false;
+}
+
+// =====================================================
 // Método que gerencia as chamadas do Flutter
 // =====================================================
 void ThermalPrinterFlutterPlugin::HandleMethodCall(
@@ -299,6 +347,14 @@ void ThermalPrinterFlutterPlugin::HandleMethodCall(
   } else if (method_call.method_name().compare("disconnect") == 0) {
     // TODO: Implementar desconexão
     result->Success(flutter::EncodableValue(true));
+  } else if (method_call.method_name().compare("isConnected") == 0) {
+    const auto* macAddress = std::get_if<std::string>(method_call.arguments());
+    if (macAddress) {
+      bool isConnected = IsBluetoothConnected(*macAddress);
+      result->Success(flutter::EncodableValue(isConnected));
+    } else {
+      result->Error("invalid_argument", "MAC address is required");
+    }
   } else {
     result->NotImplemented();
   }

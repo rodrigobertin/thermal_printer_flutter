@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:thermal_printer_flutter/thermal_printer_flutter.dart';
 import 'package:thermal_printer_flutter_example/src/order_widget.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 void main() {
   runApp(MaterialApp(home: const MyApp()));
@@ -24,6 +25,9 @@ class _MyAppState extends State<MyApp> {
   bool _isConnecting = false;
   final _ipController = TextEditingController();
   final _portController = TextEditingController(text: '9100');
+  String? _connectionError;
+  MaterialBanner? _currentBanner;
+  final _messengerKey = GlobalKey<ScaffoldMessengerState>();
 
   @override
   void initState() {
@@ -35,6 +39,9 @@ class _MyAppState extends State<MyApp> {
   void dispose() {
     _ipController.dispose();
     _portController.dispose();
+    if (_currentBanner != null) {
+      _messengerKey.currentState?.hideCurrentMaterialBanner();
+    }
     super.dispose();
   }
 
@@ -61,43 +68,95 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> _loadPrinters() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _connectionError = null;
+    });
+
     try {
-      final bluetoothPrinters = await _thermalPrinterFlutterPlugin.getPrinters(printerType: PrinterType.bluethoot);
-      final usbPrinters = await _thermalPrinterFlutterPlugin.getPrinters(printerType: PrinterType.usb);
+      // Check if Bluetooth is enabled
+      final isEnabled = await _thermalPrinterFlutterPlugin.isBluetoothEnabled();
+      if (!isEnabled) {
+        // Request Bluetooth activation
+        final enabled = await _thermalPrinterFlutterPlugin.enableBluetooth();
+        if (!enabled) {
+          setState(() {
+            _connectionError = 'Bluetooth was not enabled';
+            _isLoading = false;
+          });
+          return;
+        }
+      }
+
+      // Check and request Bluetooth permissions
+      final hasPermissions = await _thermalPrinterFlutterPlugin.checkBluetoothPermissions();
+      if (!hasPermissions) {
+        // Try again after a brief delay
+        await Future.delayed(const Duration(seconds: 1));
+        final retryPermissions = await _thermalPrinterFlutterPlugin.checkBluetoothPermissions();
+        if (!retryPermissions) {
+          setState(() {
+            _connectionError = 'Bluetooth permissions not granted';
+            _isLoading = false;
+          });
+          return;
+        }
+      }
+
+      // Load Bluetooth printers
+      List<Printer> bluetoothPrinters = [];
+      try {
+        bluetoothPrinters = await _thermalPrinterFlutterPlugin.getPrinters(printerType: PrinterType.bluethoot);
+      } catch (e) {
+        print('Error loading Bluetooth printers: $e');
+      }
+
+      // Load USB printers
+      List<Printer> usbPrinters = [];
+      try {
+        usbPrinters = await _thermalPrinterFlutterPlugin.getPrinters(printerType: PrinterType.usb);
+      } catch (e) {
+        print('Error loading USB printers: $e');
+      }
 
       setState(() {
         _printers = [...bluetoothPrinters, ...usbPrinters];
         if (_printers.isNotEmpty) {
           _selectedPrinter = _printers[0];
         }
+        _isLoading = false;
       });
     } catch (e) {
-      print('Error loading printers: $e');
-    } finally {
-      setState(() => _isLoading = false);
+      setState(() {
+        _connectionError = 'Error loading printers: $e';
+        _isLoading = false;
+      });
     }
   }
 
   Future<void> _connectPrinter(Printer printer) async {
     if (printer.type != PrinterType.bluethoot && printer.type != PrinterType.network) return;
 
-    setState(() => _isConnecting = true);
+    setState(() {
+      _isConnecting = true;
+      _connectionError = null;
+    });
+
     try {
       final connected = await _thermalPrinterFlutterPlugin.connect(printer: printer);
-      if (connected) {
-        setState(() {
-          final index = _printers.indexWhere((p) => (p.type == PrinterType.bluethoot && p.bleAddress == printer.bleAddress) || (p.type == PrinterType.network && p.ip == printer.ip && p.port == printer.port));
-          if (index != -1) {
-            _printers[index] = printer.copyWith(isConnected: true);
-            _selectedPrinter = _printers[index];
-          }
-        });
-      }
+      setState(() {
+        final index = _printers.indexWhere((p) => (p.type == PrinterType.bluethoot && p.bleAddress == printer.bleAddress) || (p.type == PrinterType.network && p.ip == printer.ip && p.port == printer.port));
+        if (index != -1) {
+          _printers[index] = printer.copyWith(isConnected: connected);
+          _selectedPrinter = _printers[index];
+        }
+        _isConnecting = false;
+      });
     } catch (e) {
-      print('Error connecting printer: $e');
-    } finally {
-      setState(() => _isConnecting = false);
+      setState(() {
+        _connectionError = 'Error connecting printer: $e';
+        _isConnecting = false;
+      });
     }
   }
 
@@ -157,20 +216,133 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
+  void _showBanner(String message, {bool isError = false}) {
+    if (!mounted) return;
+
+    // Remove current banner if exists
+    if (_currentBanner != null) {
+      _messengerKey.currentState?.hideCurrentMaterialBanner();
+    }
+
+    // Create and show new banner
+    _currentBanner = MaterialBanner(
+      content: Text(message),
+      backgroundColor: isError ? Colors.red.shade100 : Colors.green.shade100,
+      contentTextStyle: TextStyle(
+        color: isError ? Colors.red.shade900 : Colors.green.shade900,
+        fontWeight: FontWeight.bold,
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            _messengerKey.currentState?.hideCurrentMaterialBanner();
+            _currentBanner = null;
+          },
+          child: const Text('OK'),
+        ),
+      ],
+    );
+
+    _messengerKey.currentState?.showMaterialBanner(_currentBanner!);
+  }
+
+  Future<void> _checkBluetoothStatus() async {
+    try {
+      final isEnabled = await _thermalPrinterFlutterPlugin.isBluetoothEnabled();
+      if (!mounted) return;
+      _showBanner(
+        isEnabled ? 'Bluetooth is enabled' : 'Bluetooth is disabled',
+        isError: !isEnabled,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      _showBanner('Error checking Bluetooth status: $e', isError: true);
+    }
+  }
+
+  Future<void> _checkBluetoothPermissions() async {
+    try {
+      final hasPermissions = await _thermalPrinterFlutterPlugin.checkBluetoothPermissions();
+      if (!mounted) return;
+      _showBanner(
+        hasPermissions ? 'Bluetooth permissions granted' : 'Bluetooth permissions not granted',
+        isError: !hasPermissions,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      _showBanner('Error checking Bluetooth permissions: $e', isError: true);
+    }
+  }
+
+  Future<void> _enableBluetooth() async {
+    try {
+      final enabled = await _thermalPrinterFlutterPlugin.enableBluetooth();
+      if (!mounted) return;
+      _showBanner(
+        enabled ? 'Bluetooth enabled successfully' : 'Failed to enable Bluetooth',
+        isError: !enabled,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      _showBanner('Error enabling Bluetooth: $e', isError: true);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      scaffoldMessengerKey: _messengerKey,
       home: Scaffold(
         appBar: AppBar(
           title: const Text('Thermal Printer Example'),
         ),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
+        body: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: SingleChildScrollView(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text('Running on: $_platformVersion\n'),
+                if (_connectionError != null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: Text(
+                      _connectionError!,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: _checkBluetoothStatus,
+                      icon: const Icon(Icons.bluetooth),
+                      label: const Text('Check Bluetooth'),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: _checkBluetoothPermissions,
+                      icon: const Icon(Icons.security),
+                      label: const Text('Check Permissions'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: _enableBluetooth,
+                      icon: const Icon(Icons.bluetooth_connected),
+                      label: const Text('Enable Bluetooth'),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: _checkBluetoothPermissions,
+                      icon: const Icon(Icons.security_update),
+                      label: const Text('Request Permissions'),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 20),
                 Row(
                   children: [
@@ -204,13 +376,17 @@ class _MyAppState extends State<MyApp> {
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton(
-                  onPressed: _loadPrinters,
-                  child: const Text('Load Printers'),
+                  onPressed: _isLoading ? null : _loadPrinters,
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Load Printers'),
                 ),
                 const SizedBox(height: 20),
-                if (_isLoading)
-                  const CircularProgressIndicator()
-                else if (_printers.isNotEmpty) ...[
+                if (_printers.isNotEmpty) ...[
                   const Text('Select a printer:'),
                   const SizedBox(height: 10),
                   DropdownButton<Printer>(
@@ -219,6 +395,7 @@ class _MyAppState extends State<MyApp> {
                       return DropdownMenuItem<Printer>(
                         value: printer,
                         child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
                               printer.type == PrinterType.bluethoot
@@ -233,7 +410,12 @@ class _MyAppState extends State<MyApp> {
                                       : Colors.black,
                             ),
                             const SizedBox(width: 8),
-                            Text(printer.name),
+                            Flexible(
+                              child: Text(
+                                printer.name,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
                             if (printer.type == PrinterType.bluethoot || printer.type == PrinterType.network)
                               Text(
                                 printer.isConnected ? ' (Connected)' : ' (Disconnected)',
@@ -245,31 +427,31 @@ class _MyAppState extends State<MyApp> {
                         ),
                       );
                     }).toList(),
-                    onChanged: (newValue) {
-                      if (newValue != null) {
-                        setState(() {
-                          _selectedPrinter = newValue;
-                        });
-                        if ((newValue.type == PrinterType.bluethoot || newValue.type == PrinterType.network) && !newValue.isConnected) {
-                          _connectPrinter(newValue);
-                        }
-                      }
-                    },
+                    onChanged: _isConnecting
+                        ? null
+                        : (newValue) {
+                            if (newValue != null) {
+                              setState(() {
+                                _selectedPrinter = newValue;
+                              });
+                              if ((newValue.type == PrinterType.bluethoot || newValue.type == PrinterType.network) && !newValue.isConnected) {
+                                _connectPrinter(newValue);
+                              }
+                            }
+                          },
                   ),
-                  if (!_isConnecting)
-                    TextFormField(
-                      initialValue: _bluethotMaxChunks,
-                      onChanged: (value) => _bluethotMaxChunks = value,
-                      decoration: const InputDecoration(
-                        label: Text('Bluetooth Max Chunks'),
-                      ),
-                    ),
                   const SizedBox(height: 20),
                   if (_isConnecting)
-                    const CircularProgressIndicator()
+                    const Column(
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(height: 8),
+                        Text('Connecting...'),
+                      ],
+                    )
                   else
                     ElevatedButton(
-                      onPressed: _printTest,
+                      onPressed: _selectedPrinter?.isConnected == true ? _printTest : null,
                       child: const Text('Print Test'),
                     ),
                 ],

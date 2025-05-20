@@ -7,6 +7,7 @@ class Printer {
   final String ip;
   final String port;
   final String bleAddress;
+  final String usbAddress;
   final PrinterType type;
   final bool isConnected;
 
@@ -16,6 +17,7 @@ class Printer {
     this.ip = '',
     this.port = '9100',
     this.bleAddress = '',
+    this.usbAddress = '',
     this.isConnected = false,
   });
 
@@ -24,6 +26,7 @@ class Printer {
     String? ip,
     String? port,
     String? bleAddress,
+    String? usbAddress,
     PrinterType? type,
     bool? isConnected,
   }) {
@@ -32,6 +35,7 @@ class Printer {
       ip: ip ?? this.ip,
       port: port ?? this.port,
       bleAddress: bleAddress ?? this.bleAddress,
+      usbAddress: usbAddress ?? this.usbAddress,
       type: type ?? this.type,
       isConnected: isConnected ?? this.isConnected,
     );
@@ -43,6 +47,7 @@ class Printer {
       'ip': ip,
       'port': port,
       'bleAddress': bleAddress,
+      'usbAddress': usbAddress,
       'type': type.name,
       'isConnected': isConnected,
     };
@@ -54,6 +59,7 @@ class Printer {
       ip: map['ip'] ?? '',
       port: map['port'] ?? '',
       bleAddress: map['bleAddress'] ?? '',
+      usbAddress: map['usbAddress'] ?? '',
       type: PrinterType.values.byName(map['type']),
       isConnected: map['isConnected'] ?? false,
     );
@@ -67,17 +73,11 @@ class Printer {
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
 
-    return other is Printer &&
-        other.name == name &&
-        other.ip == ip &&
-        other.port == port &&
-        other.bleAddress == bleAddress &&
-        other.type == type &&
-        other.isConnected == isConnected;
+    return other is Printer && other.name == name && other.ip == ip && other.port == port && other.bleAddress == bleAddress && other.usbAddress == usbAddress && other.type == type && other.isConnected == isConnected;
   }
 
   @override
   int get hashCode {
-    return name.hashCode ^ ip.hashCode ^ port.hashCode ^ bleAddress.hashCode ^ type.hashCode ^ isConnected.hashCode;
+    return name.hashCode ^ ip.hashCode ^ port.hashCode ^ bleAddress.hashCode ^ usbAddress.hashCode ^ type.hashCode ^ isConnected.hashCode;
   }
 }

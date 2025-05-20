@@ -27,6 +27,18 @@ abstract class ThermalPrinterFlutterPlatform extends PlatformInterface {
     throw UnimplementedError('platformVersion() has not been implemented.');
   }
 
+  Future<bool> checkBluetoothPermissions() {
+    throw UnimplementedError('checkBluetoothPermissions() has not been implemented.');
+  }
+
+  Future<bool> isBluetoothEnabled() {
+    throw UnimplementedError('isBluetoothEnabled() has not been implemented.');
+  }
+
+  Future<bool> enableBluetooth() {
+    throw UnimplementedError('enableBluetooth() has not been implemented.');
+  }
+
   Future<List<Printer>> getPrinters({required PrinterType printerType}) {
     throw UnimplementedError('getPrinters() has not been implemented.');
   }
@@ -36,6 +48,14 @@ abstract class ThermalPrinterFlutterPlatform extends PlatformInterface {
   }
 
   Future<bool> connect({required Printer printer}) {
-    throw UnimplementedError('printBytes() has not been implemented.');
+    throw UnimplementedError('connect() has not been implemented.');
+  }
+
+  Future<void> disconnect({required Printer printer}) {
+    throw UnimplementedError('disconnect() has not been implemented.');
+  }
+
+  Future<bool> isConnected({required Printer printer}) {
+    throw UnimplementedError('isConnected() has not been implemented.');
   }
 }
