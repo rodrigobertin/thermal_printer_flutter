@@ -450,9 +450,35 @@ class _MyAppState extends State<MyApp> {
                       ],
                     )
                   else
-                    ElevatedButton(
-                      onPressed: _selectedPrinter?.isConnected == true ? _printTest : null,
-                      child: const Text('Print Test'),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        ElevatedButton(
+                          onPressed: _selectedPrinter?.isConnected == true ? _printTest : null,
+                          child: const Text('Print Test'),
+                        ),
+                        const SizedBox(width: 10),
+                        ElevatedButton(
+                          onPressed: _selectedPrinter?.isConnected == true
+                              ? () async {
+                                  try {
+                                    await _thermalPrinterFlutterPlugin.disconnect(printer: _selectedPrinter!);
+                                    setState(() {
+                                      final index = _printers.indexWhere((p) => p == _selectedPrinter);
+                                      if (index != -1) {
+                                        _printers[index] = _printers[index].copyWith(isConnected: false);
+                                        _selectedPrinter = _printers[index];
+                                      }
+                                    });
+                                    _showBanner('Impressora desconectada com sucesso');
+                                  } catch (e) {
+                                    _showBanner('Erro ao desconectar impressora: $e', isError: true);
+                                  }
+                                }
+                              : null,
+                          child: const Text('Desconectar'),
+                        ),
+                      ],
                     ),
                 ],
               ],
