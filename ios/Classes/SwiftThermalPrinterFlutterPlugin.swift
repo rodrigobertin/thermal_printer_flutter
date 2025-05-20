@@ -1,10 +1,8 @@
-import FlutterMacOS
-import AppKit
+import Flutter
+import UIKit
 import CoreBluetooth
-import IOKit
-import IOKit.usb
 
-public class ThermalPrinterFlutterPlugin: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate, FlutterPlugin {
+public class SwiftThermalPrinterFlutterPlugin: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate, FlutterPlugin {
     var centralManager: CBCentralManager?
     var discoveredDevices: [String] = []
     var connectedPeripheral: CBPeripheral!
@@ -13,8 +11,9 @@ public class ThermalPrinterFlutterPlugin: NSObject, CBCentralManagerDelegate, CB
     
     var flutterResult: FlutterResult?
     var bytes: [UInt8]?
+    var stringprint = ""
     
-    // UUIDs comuns para impressoras térmicas
+    // UUIDs específicos para impressoras térmicas
     let printerServiceUUID = CBUUID(string: "49535343-FE7D-4AE5-8FA9-9FAFD205E455")
     let printerCharacteristicUUID = CBUUID(string: "49535343-1E4D-4BD9-BA61-23C647249616")
     
@@ -23,13 +22,12 @@ public class ThermalPrinterFlutterPlugin: NSObject, CBCentralManagerDelegate, CB
     }
     
     public static func register(with registrar: FlutterPluginRegistrar) {
-        let channel = FlutterMethodChannel(name: "thermal_printer_flutter", binaryMessenger: registrar.messenger)
-        let instance = ThermalPrinterFlutterPlugin()
+        let channel = FlutterMethodChannel(name: "thermal_printer_flutter", binaryMessenger: registrar.messenger())
+        let instance = SwiftThermalPrinterFlutterPlugin()
         registrar.addMethodCallDelegate(instance, channel: channel)
     }
     
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        // Initialize central manager if not already initialized
         if self.centralManager == nil {
             self.centralManager = CBCentralManager(delegate: self, queue: nil)
         }
@@ -38,9 +36,8 @@ public class ThermalPrinterFlutterPlugin: NSObject, CBCentralManagerDelegate, CB
         
         switch call.method {
         case "getPlatformVersion":
-            let macOSVersion = ProcessInfo.processInfo.operatingSystemVersion
-            let versionString = "\(macOSVersion.majorVersion).\(macOSVersion.minorVersion).\(macOSVersion.patchVersion)"
-            result("macOS \(versionString)")
+            let iosVersion = UIDevice.current.systemVersion
+            result("iOS " + iosVersion)
             
         case "isBluetoothEnabled":
             switch centralManager?.state {
@@ -51,7 +48,14 @@ public class ThermalPrinterFlutterPlugin: NSObject, CBCentralManagerDelegate, CB
             }
             
         case "checkBluetoothPermissions":
-            result(true)
+            if #available(iOS 10.0, *) {
+                switch centralManager?.state {
+                case .poweredOn:
+                    result(true)
+                default:
+                    result(false)
+                }
+            }
             
         case "enableBluetooth":
             result(false)
@@ -77,35 +81,13 @@ public class ThermalPrinterFlutterPlugin: NSObject, CBCentralManagerDelegate, CB
                         result(printers)
                     }
                 case "usb":
-                    let usbPrinters = self.getUSBPrinters()
-                    result(usbPrinters)
+                    result([])
                 default:
                     result([])
                 }
             } else {
                 result([])
             }
-            
-        case "pairedbluetooths":
-            discoveredDevices.removeAll()
-            centralManager?.scanForPeripherals(withServices: nil, options: nil)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
-                self.centralManager?.stopScan()
-                let printers = self.discoveredDevices.map { deviceString -> [String: Any] in
-                    let components = deviceString.split(separator: "#")
-                    return [
-                        "name": String(components[0]),
-                        "bleAddress": String(components[1]),
-                        "type": "bluethoot",
-                        "isConnected": false
-                    ]
-                }
-                result(printers)
-            }
-            
-        case "usbprinters":
-            let usbPrinters = self.getUSBPrinters()
-            result(usbPrinters)
             
         case "connect":
             guard let bleAddress = call.arguments as? String,
@@ -127,12 +109,12 @@ public class ThermalPrinterFlutterPlugin: NSObject, CBCentralManagerDelegate, CB
             print("Found peripheral: \(peripheral.name ?? "Unknown")")
             centralManager?.connect(peripheral, options: nil)
             
-            DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                 if peripheral.state == .connected {
                     print("Successfully connected to peripheral")
                     self.connectedPeripheral = peripheral
                     self.connectedPeripheral.delegate = self
-                    self.connectedPeripheral.discoverServices(nil)
+                    self.connectedPeripheral.discoverServices([self.printerServiceUUID])
                     result(true)
                 } else {
                     print("Failed to connect to peripheral")
@@ -164,10 +146,8 @@ public class ThermalPrinterFlutterPlugin: NSObject, CBCentralManagerDelegate, CB
                 return
             }
             print("Attempting to write \(arguments.count) bytes")
-            print("Using characteristic: \(characteristic.uuid)")
-            print("Characteristic properties: \(characteristic.properties)")
             
-            // Dividir os dados em chunks menores se necessário
+            // Dividir os dados em chunks menores
             let chunkSize = 512
             var offset = 0
             while offset < arguments.count {
@@ -175,12 +155,10 @@ public class ThermalPrinterFlutterPlugin: NSObject, CBCentralManagerDelegate, CB
                 let chunk = Array(arguments[offset..<end])
                 let data = Data(chunk)
                 
-                let writeType: CBCharacteristicWriteType = characteristic.properties.contains(.write) ? .withResponse : .withoutResponse
-                print("Writing chunk of size \(chunk.count) with type \(writeType)")
-                connectedPeripheral?.writeValue(data, for: characteristic, type: writeType)
+                print("Writing chunk of size \(chunk.count)")
+                connectedPeripheral?.writeValue(data, for: characteristic, type: .withoutResponse)
                 
                 offset = end
-                // Pequeno delay entre chunks
                 Thread.sleep(forTimeInterval: 0.1)
             }
             result(true)
@@ -193,92 +171,14 @@ public class ThermalPrinterFlutterPlugin: NSObject, CBCentralManagerDelegate, CB
                 return
             }
             print("Attempting to print string: \(string)")
-            let data = Data(string.utf8)
-            let writeType: CBCharacteristicWriteType = characteristic.properties.contains(.write) ? .withResponse : .withoutResponse
-            connectedPeripheral?.writeValue(data, for: characteristic, type: writeType)
-            result(true)
             
-        case "printBytes":
-            if let args = call.arguments as? [String: Any],
-               let bytes = args["bytes"] as? [UInt8],
-               let characteristic = targetCharacteristic {
-                print("Attempting to print \(bytes.count) bytes")
-                let data = Data(bytes)
-                let writeType: CBCharacteristicWriteType = characteristic.properties.contains(.write) ? .withResponse : .withoutResponse
-                connectedPeripheral?.writeValue(data, for: characteristic, type: writeType)
-                result(true)
-            } else {
-                print("Invalid arguments for printBytes or no characteristic available")
-                result(false)
-            }
+            let data = Data(string.utf8)
+            connectedPeripheral?.writeValue(data, for: characteristic, type: .withoutResponse)
+            result(true)
             
         default:
             result(FlutterMethodNotImplemented)
         }
-    }
-    
-    // MARK: - USB Printer Methods
-    
-    private func getUSBPrinters() -> [[String: Any]] {
-        var printers: [[String: Any]] = []
-        
-        var masterPort: mach_port_t = 0
-        let status = IOMasterPort(bootstrap_port, &masterPort)
-        
-        guard status == KERN_SUCCESS else {
-            print("Failed to create master port")
-            return printers
-        }
-        
-        let matchingDict = IOServiceMatching(kIOUSBDeviceClassName)
-        
-        var iterator: io_iterator_t = 0
-        let result = IOServiceGetMatchingServices(masterPort, matchingDict, &iterator)
-        
-        if result == kIOReturnSuccess {
-            var device = IOIteratorNext(iterator)
-            while device != 0 {
-                if let printer = getPrinterInfo(from: device) {
-                    printers.append(printer)
-                }
-                IOObjectRelease(device)
-                device = IOIteratorNext(iterator)
-            }
-            IOObjectRelease(iterator)
-        }
-        
-        return printers
-    }
-    
-    private func getPrinterInfo(from device: io_object_t) -> [String: Any]? {
-        var printerInfo: [String: Any] = [:]
-        
-        // Get device name
-        if let name = getDeviceProperty(device, key: "USB Product Name") as? String {
-            printerInfo["name"] = name
-        } else {
-            printerInfo["name"] = "Unknown USB Printer"
-        }
-        
-        // Get device address
-        if let address = getDeviceProperty(device, key: "USB Address") as? Int {
-            printerInfo["usbAddress"] = String(address)
-        }
-        
-        // Add type
-        printerInfo["type"] = "usb"
-        printerInfo["isConnected"] = true
-        
-        return printerInfo
-    }
-    
-    private func getDeviceProperty(_ device: io_object_t, key: String) -> Any? {
-        var value: Any?
-        let keyRef = IORegistryEntryCreateCFProperty(device, key as CFString, kCFAllocatorDefault, 0)
-        if let keyRef = keyRef {
-            value = keyRef.takeUnretainedValue()
-        }
-        return value
     }
     
     // MARK: - CBCentralManagerDelegate
@@ -337,7 +237,11 @@ public class ThermalPrinterFlutterPlugin: NSObject, CBCentralManagerDelegate, CB
         if let services = peripheral.services {
             for service in services {
                 print("Discovered service: \(service.uuid)")
-                peripheral.discoverCharacteristics(nil, for: service)
+                if service.uuid == printerServiceUUID {
+                    print("Found printer service: \(service.uuid)")
+                    targetService = service
+                    peripheral.discoverCharacteristics([printerCharacteristicUUID], for: service)
+                }
             }
         }
     }
@@ -351,19 +255,9 @@ public class ThermalPrinterFlutterPlugin: NSObject, CBCentralManagerDelegate, CB
         if let characteristics = service.characteristics {
             for characteristic in characteristics {
                 print("Discovered characteristic: \(characteristic.uuid)")
-                print("Characteristic properties: \(characteristic.properties)")
-                
-                // Lista de UUIDs possíveis para características de impressão
-                let possiblePrinterCharacteristics = [
-                    "49535343-1E4D-4BD9-BA61-23C647249616", // UUID original
-                    "49535343-ACA3-481C-91EC-D85E28A60318", // UUID encontrado
-                    "49535343-8841-43F4-A8D4-ECBE34729BB3", // UUID comum para impressoras
-                    "49535343-4C02-A5E5-4B9A-9B9A-9B9A9B9A9B9A" // UUID genérico
-                ]
-                
-                if possiblePrinterCharacteristics.contains(characteristic.uuid.uuidString) {
+                if characteristic.uuid == printerCharacteristicUUID {
                     targetCharacteristic = characteristic
-                    print("Found printer characteristic: \(characteristic.uuid.uuidString)")
+                    print("Found printer characteristic: \(characteristic.uuid)")
                     print("Characteristic properties: \(characteristic.properties)")
                 }
             }
@@ -373,23 +267,10 @@ public class ThermalPrinterFlutterPlugin: NSObject, CBCentralManagerDelegate, CB
     public func peripheral(_ peripheral: CBPeripheral, didWriteValueFor characteristic: CBCharacteristic, error: Error?) {
         if let error = error {
             print("Error writing value: \(error.localizedDescription)")
-            print("Error details: \(error)")
             flutterResult?(false)
         } else {
             print("Successfully wrote value to characteristic: \(characteristic.uuid)")
-            print("Characteristic properties: \(characteristic.properties)")
             flutterResult?(true)
         }
     }
-    
-    // MARK: - Write Methods
-    
-    private func writeData(_ data: Data, characteristic: CBCharacteristic) {
-        print("Writing data of length: \(data.count)")
-        print("Using characteristic: \(characteristic.uuid)")
-        print("Characteristic properties: \(characteristic.properties)")
-        
-        let writeType: CBCharacteristicWriteType = characteristic.properties.contains(.write) ? .withResponse : .withoutResponse
-        connectedPeripheral?.writeValue(data, for: characteristic, type: writeType)
-    }
-}
+} 

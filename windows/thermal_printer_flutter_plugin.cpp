@@ -156,15 +156,19 @@ void ThermalPrinterFlutterPlugin::HandleMethodCall(
       version_stream << "7";
     }
     result->Success(flutter::EncodableValue(version_stream.str()));
-  } else if (method_call.method_name().compare("getPrinters") == 0) {
-    // Retorna a lista de impressoras
+  } else if (method_call.method_name().compare("usbprinters") == 0) {
+    // Retorna a lista de impressoras USB
     auto printers = GetPrinters();
     flutter::EncodableList printerList;
     for (const auto& printer : printers) {
-      printerList.push_back(flutter::EncodableValue(printer));
+      flutter::EncodableMap printerMap;
+      printerMap[flutter::EncodableValue("name")] = flutter::EncodableValue(printer);
+      printerMap[flutter::EncodableValue("type")] = flutter::EncodableValue("usb");
+      printerMap[flutter::EncodableValue("isConnected")] = flutter::EncodableValue(true);
+      printerList.push_back(flutter::EncodableValue(printerMap));
     }
     result->Success(flutter::EncodableValue(printerList));
-  } else if (method_call.method_name().compare("printBytes") == 0) {
+  } else if (method_call.method_name().compare("writebytes") == 0) {
     // Processa a impressão de bytes
     const auto* arguments = std::get_if<flutter::EncodableMap>(method_call.arguments());
     if (arguments) {
