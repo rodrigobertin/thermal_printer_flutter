@@ -1,10 +1,11 @@
+// ignore_for_file: avoid_print
+
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:thermal_printer_flutter/thermal_printer_flutter.dart';
 import 'package:thermal_printer_flutter_example/src/order_widget.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 void main() {
   runApp(MaterialApp(home: const MyApp()));
@@ -46,7 +47,6 @@ class _MyAppState extends State<MyApp> {
     super.dispose();
   }
 
-  final String _bluethotMaxChunks = '244';
   // Platform messages are asynchronous, so we initialize in an async method.
   Future<void> initPlatformState() async {
     String platformVersion;
@@ -204,14 +204,14 @@ class _MyAppState extends State<MyApp> {
       bytes += generator.text('This is a test print');
       bytes += generator.feed(2);
       bytes += generator.cut();
-
-      final image = await _thermalPrinterFlutterPlugin.screenShotWidget(
-        context,
-        widget: OrderWidget(),
-        pixelRatio: 5.0,
-      );
-
-      bytes += generator.imageRaster(image);
+      if (mounted) {
+        final image = await _thermalPrinterFlutterPlugin.screenShotWidget(
+          context,
+          widget: OrderWidget(),
+          pixelRatio: 5.0,
+        );
+        bytes += generator.imageRaster(image);
+      }
 
       bytes += generator.feed(2);
       bytes += generator.cut();
