@@ -11,15 +11,29 @@ class BluetoothPrinterRepository implements PrinterRepository {
     try {
       final List<dynamic> devices = await _channel.invokeMethod<List<dynamic>>('pairedbluetooths') ?? [];
       return devices.map((device) {
-        final parts = device.split('#');
+        if (device is Map) {
+          return Printer(
+            type: PrinterType.bluethoot,
+            name: device['name'] ?? '',
+            bleAddress: device['bleAddress'] ?? '',
+            isConnected: device['isConnected'] ?? false,
+          );
+        } else if (device is String) {
+          final parts = device.split('#');
+          return Printer(
+            type: PrinterType.bluethoot,
+            name: parts[0],
+            bleAddress: parts[1],
+          );
+        }
         return Printer(
           type: PrinterType.bluethoot,
-          name: parts[0],
-          bleAddress: parts[1],
+          name: '',
+          bleAddress: '',
         );
       }).toList();
     } catch (e) {
-      print('Erro ao obter impressoras Bluetooth: $e');
+      log('Erro ao obter impressoras Bluetooth: $e', name: 'THERMAL_PRINTER_FLUTTER');
       return [];
     }
   }
@@ -37,7 +51,7 @@ class BluetoothPrinterRepository implements PrinterRepository {
       final bool result = await _channel.invokeMethod<bool>('connect', printer.bleAddress) ?? false;
       return result;
     } catch (e) {
-      print('Erro ao conectar impressora Bluetooth: $e');
+      log('Erro ao conectar impressora Bluetooth: $e', name: 'THERMAL_PRINTER_FLUTTER');
       return false;
     }
   }
@@ -47,7 +61,7 @@ class BluetoothPrinterRepository implements PrinterRepository {
     try {
       await _channel.invokeMethod('disconnect');
     } catch (e) {
-      print('Erro ao desconectar impressora Bluetooth: $e');
+      log('Erro ao desconectar impressora Bluetooth: $e', name: 'THERMAL_PRINTER_FLUTTER');
     }
   }
 
@@ -56,7 +70,7 @@ class BluetoothPrinterRepository implements PrinterRepository {
     try {
       await _channel.invokeMethod('writebytes', bytes);
     } catch (e) {
-      print('Erro ao imprimir bytes: $e');
+      log('Erro ao imprimir bytes: $e', name: 'THERMAL_PRINTER_FLUTTER');
       rethrow;
     }
   }
@@ -67,7 +81,7 @@ class BluetoothPrinterRepository implements PrinterRepository {
       final bool result = await _channel.invokeMethod<bool>('isConnected', printer.bleAddress) ?? false;
       return result;
     } catch (e) {
-      print('Erro ao verificar conexão Bluetooth: $e');
+      log('Erro ao verificar conexão Bluetooth: $e', name: 'THERMAL_PRINTER_FLUTTER');
       return false;
     }
   }

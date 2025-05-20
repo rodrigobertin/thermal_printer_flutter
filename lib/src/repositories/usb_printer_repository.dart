@@ -10,12 +10,19 @@ class UsbPrinterRepository implements PrinterRepository {
   Future<List<Printer>> getPrinters() async {
     try {
       final List<dynamic>? devices = await _channel.invokeMethod<List<dynamic>>('usbprinters');
-      return devices?.map((d) {
-            final parts = d.split('#');
+      return devices?.map((device) {
+            if (device is Map) {
+              return Printer(
+                type: PrinterType.usb,
+                name: device['name'] ?? '',
+                usbAddress: device['usbAddress'] ?? '',
+                isConnected: device['isConnected'] ?? false,
+              );
+            }
             return Printer(
               type: PrinterType.usb,
-              name: parts[0],
-              usbAddress: parts[1],
+              name: '',
+              usbAddress: '',
             );
           }).toList() ??
           [];
