@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:thermal_printer_flutter/thermal_printer_flutter.dart';
 import 'package:thermal_printer_flutter_example/src/order_widget.dart';
@@ -45,7 +46,7 @@ class _MyAppState extends State<MyApp> {
     super.dispose();
   }
 
-  String _bluethotMaxChunks = '244';
+  final String _bluethotMaxChunks = '244';
   // Platform messages are asynchronous, so we initialize in an async method.
   Future<void> initPlatformState() async {
     String platformVersion;
@@ -74,41 +75,43 @@ class _MyAppState extends State<MyApp> {
     });
 
     try {
-      // Check if Bluetooth is enabled
-      final isEnabled = await _thermalPrinterFlutterPlugin.isBluetoothEnabled();
-      if (!isEnabled) {
-        // Request Bluetooth activation
-        final enabled = await _thermalPrinterFlutterPlugin.enableBluetooth();
-        if (!enabled) {
-          setState(() {
-            _connectionError = 'Bluetooth was not enabled';
-            _isLoading = false;
-          });
-          return;
-        }
-      }
-
-      // Check and request Bluetooth permissions
-      final hasPermissions = await _thermalPrinterFlutterPlugin.checkBluetoothPermissions();
-      if (!hasPermissions) {
-        // Try again after a brief delay
-        await Future.delayed(const Duration(seconds: 1));
-        final retryPermissions = await _thermalPrinterFlutterPlugin.checkBluetoothPermissions();
-        if (!retryPermissions) {
-          setState(() {
-            _connectionError = 'Bluetooth permissions not granted';
-            _isLoading = false;
-          });
-          return;
-        }
-      }
-
-      // Load Bluetooth printers
       List<Printer> bluetoothPrinters = [];
-      try {
-        bluetoothPrinters = await _thermalPrinterFlutterPlugin.getPrinters(printerType: PrinterType.bluethoot);
-      } catch (e) {
-        print('Error loading Bluetooth printers: $e');
+      if (!Platform.isWindows) {
+        // Check if Bluetooth is enabled
+        final isEnabled = await _thermalPrinterFlutterPlugin.isBluetoothEnabled();
+        if (!isEnabled) {
+          // Request Bluetooth activation
+          final enabled = await _thermalPrinterFlutterPlugin.enableBluetooth();
+          if (!enabled) {
+            setState(() {
+              _connectionError = 'Bluetooth was not enabled';
+              _isLoading = false;
+            });
+            return;
+          }
+        }
+
+        // Check and request Bluetooth permissions
+        final hasPermissions = await _thermalPrinterFlutterPlugin.checkBluetoothPermissions();
+        if (!hasPermissions) {
+          // Try again after a brief delay
+          await Future.delayed(const Duration(seconds: 1));
+          final retryPermissions = await _thermalPrinterFlutterPlugin.checkBluetoothPermissions();
+          if (!retryPermissions) {
+            setState(() {
+              _connectionError = 'Bluetooth permissions not granted';
+              _isLoading = false;
+            });
+            return;
+          }
+        }
+
+        // Load Bluetooth printers
+        try {
+          bluetoothPrinters = await _thermalPrinterFlutterPlugin.getPrinters(printerType: PrinterType.bluethoot);
+        } catch (e) {
+          print('Error loading Bluetooth printers: $e');
+        }
       }
 
       // Load USB printers
@@ -145,7 +148,9 @@ class _MyAppState extends State<MyApp> {
     try {
       final connected = await _thermalPrinterFlutterPlugin.connect(printer: printer);
       setState(() {
-        final index = _printers.indexWhere((p) => (p.type == PrinterType.bluethoot && p.bleAddress == printer.bleAddress) || (p.type == PrinterType.network && p.ip == printer.ip && p.port == printer.port));
+        final index = _printers.indexWhere((p) =>
+            (p.type == PrinterType.bluethoot && p.bleAddress == printer.bleAddress) ||
+            (p.type == PrinterType.network && p.ip == printer.ip && p.port == printer.port));
         if (index != -1) {
           _printers[index] = printer.copyWith(isConnected: connected);
           _selectedPrinter = _printers[index];
@@ -312,38 +317,40 @@ class _MyAppState extends State<MyApp> {
                     ),
                   ),
                 const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    ElevatedButton.icon(
-                      onPressed: _checkBluetoothStatus,
-                      icon: const Icon(Icons.bluetooth),
-                      label: const Text('Check Bluetooth'),
-                    ),
-                    ElevatedButton.icon(
-                      onPressed: _checkBluetoothPermissions,
-                      icon: const Icon(Icons.security),
-                      label: const Text('Check Permissions'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    ElevatedButton.icon(
-                      onPressed: _enableBluetooth,
-                      icon: const Icon(Icons.bluetooth_connected),
-                      label: const Text('Enable Bluetooth'),
-                    ),
-                    ElevatedButton.icon(
-                      onPressed: _checkBluetoothPermissions,
-                      icon: const Icon(Icons.security_update),
-                      label: const Text('Request Permissions'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
+                if (!Platform.isWindows) ...[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: _checkBluetoothStatus,
+                        icon: const Icon(Icons.bluetooth),
+                        label: const Text('Check Bluetooth'),
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: _checkBluetoothPermissions,
+                        icon: const Icon(Icons.security),
+                        label: const Text('Check Permissions'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: _enableBluetooth,
+                        icon: const Icon(Icons.bluetooth_connected),
+                        label: const Text('Enable Bluetooth'),
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: _checkBluetoothPermissions,
+                        icon: const Icon(Icons.security_update),
+                        label: const Text('Request Permissions'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                ],
                 Row(
                   children: [
                     Expanded(
