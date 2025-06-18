@@ -30,6 +30,8 @@ class _MyAppState extends State<MyApp> {
   String? _connectionError;
   MaterialBanner? _currentBanner;
   final _messengerKey = GlobalKey<ScaffoldMessengerState>();
+  bool _isDiscovering = false;
+  String _discoveryProgress = '';
 
   @override
   void initState() {
@@ -146,22 +148,42 @@ class _MyAppState extends State<MyApp> {
     });
 
     try {
+      if (printer.type == PrinterType.network) {
+        print('Tentando conectar à impressora de rede: ${printer.ip}:${printer.port}');
+        _showBanner('Conectando à impressora de rede ${printer.ip}:${printer.port}...');
+      }
+
       final connected = await _thermalPrinterFlutterPlugin.connect(printer: printer);
+
       setState(() {
-        final index = _printers.indexWhere((p) =>
-            (p.type == PrinterType.bluethoot && p.bleAddress == printer.bleAddress) ||
-            (p.type == PrinterType.network && p.ip == printer.ip && p.port == printer.port));
+        final index = _printers.indexWhere((p) => (p.type == PrinterType.bluethoot && p.bleAddress == printer.bleAddress) || (p.type == PrinterType.network && p.ip == printer.ip && p.port == printer.port));
         if (index != -1) {
           _printers[index] = printer.copyWith(isConnected: connected);
           _selectedPrinter = _printers[index];
         }
         _isConnecting = false;
       });
+
+      if (connected) {
+        if (printer.type == PrinterType.network) {
+          print('Conectado com sucesso à impressora de rede: ${printer.ip}:${printer.port}');
+          _showBanner('Conectado com sucesso à impressora de rede!');
+        } else {
+          _showBanner('Conectado com sucesso à impressora Bluetooth!');
+        }
+      } else {
+        final errorMsg = printer.type == PrinterType.network ? 'Falha ao conectar à impressora de rede ${printer.ip}:${printer.port}. Verifique se a impressora está ligada e acessível na rede.' : 'Falha ao conectar à impressora Bluetooth';
+        print(errorMsg);
+        _showBanner(errorMsg, isError: true);
+      }
     } catch (e) {
+      final errorMsg = printer.type == PrinterType.network ? 'Erro ao conectar à impressora de rede ${printer.ip}:${printer.port}: $e' : 'Erro ao conectar à impressora Bluetooth: $e';
+      print(errorMsg);
       setState(() {
-        _connectionError = 'Error connecting printer: $e';
+        _connectionError = errorMsg;
         _isConnecting = false;
       });
+      _showBanner(errorMsg, isError: true);
     }
   }
 
@@ -293,6 +315,89 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
+  Future<void> _testNetworkConnection() async {
+    if (_ipController.text.isEmpty) {
+      _showBanner('Por favor, insira um endereço IP', isError: true);
+      return;
+    }
+
+    setState(() {
+      _isConnecting = true;
+      _connectionError = null;
+    });
+
+    try {
+      final ip = _ipController.text;
+      final port = _portController.text;
+      _showBanner('Testando conectividade com $ip:$port...');
+
+      // Testa conectividade usando Socket diretamente
+      final socket = await Socket.connect(ip, int.tryParse(port) ?? 9100, timeout: const Duration(seconds: 5));
+      await socket.close();
+
+      _showBanner('Conectividade OK! A impressora está acessível na rede.');
+    } catch (e) {
+      print('Teste de conectividade falhou: $e');
+      _showBanner('Teste de conectividade falhou: $e. Verifique o IP, porta e se a impressora está ligada.', isError: true);
+    } finally {
+      setState(() {
+        _isConnecting = false;
+      });
+    }
+  }
+
+  Future<void> _discoverNetworkPrinters() async {
+    setState(() {
+      _isDiscovering = true;
+      _discoveryProgress = 'Iniciando descoberta...';
+      _connectionError = null;
+    });
+
+    try {
+      print('Iniciando descoberta automática de impressoras na rede...');
+
+      final discoveredPrinters = await _thermalPrinterFlutterPlugin.discoverNetworkPrinters(
+        onProgress: (progress) {
+          setState(() {
+            _discoveryProgress = progress;
+          });
+          print('Progress: $progress');
+        },
+      );
+
+      setState(() {
+        // Remove impressoras de rede existentes para evitar duplicatas
+        _printers.removeWhere((printer) => printer.type == PrinterType.network);
+
+        // Adiciona as impressoras descobertas
+        _printers.addAll(discoveredPrinters);
+
+        if (discoveredPrinters.isNotEmpty && _selectedPrinter == null) {
+          _selectedPrinter = discoveredPrinters.first;
+        }
+
+        _isDiscovering = false;
+        _discoveryProgress = '';
+      });
+
+      if (discoveredPrinters.isEmpty) {
+        _showBanner('Nenhuma impressora encontrada na rede. Verifique se as impressoras estão ligadas e conectadas à mesma rede.');
+      } else {
+        _showBanner('Encontradas ${discoveredPrinters.length} impressoras na rede!');
+      }
+
+      print('Descoberta concluída. Encontradas ${discoveredPrinters.length} impressoras');
+    } catch (e) {
+      print('Erro durante descoberta: $e');
+      setState(() {
+        _connectionError = 'Erro durante descoberta: $e';
+        _isDiscovering = false;
+        _discoveryProgress = '';
+      });
+      _showBanner('Erro durante descoberta: $e', isError: true);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -351,36 +456,6 @@ class _MyAppState extends State<MyApp> {
                   ),
                   const SizedBox(height: 20),
                 ],
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _ipController,
-                        decoration: const InputDecoration(
-                          labelText: 'Printer IP',
-                          hintText: '192.168.1.100',
-                        ),
-                        keyboardType: TextInputType.number,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    SizedBox(
-                      width: 100,
-                      child: TextField(
-                        controller: _portController,
-                        decoration: const InputDecoration(
-                          labelText: 'Port',
-                        ),
-                        keyboardType: TextInputType.number,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      onPressed: _addNetworkPrinter,
-                      child: const Text('Add'),
-                    ),
-                  ],
-                ),
                 const SizedBox(height: 20),
                 ElevatedButton(
                   onPressed: _isLoading ? null : _loadPrinters,
@@ -488,6 +563,111 @@ class _MyAppState extends State<MyApp> {
                       ],
                     ),
                 ],
+                const SizedBox(height: 20),
+                // Seção para descoberta automática de impressoras
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Descoberta Automática de Impressoras',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Escaneia a rede local procurando por impressoras nas portas comuns (9100, 515, 631)',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        if (_isDiscovering) ...[
+                          const LinearProgressIndicator(),
+                          const SizedBox(height: 8),
+                          Text(
+                            _discoveryProgress,
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ] else ...[
+                          ElevatedButton.icon(
+                            onPressed: _discoverNetworkPrinters,
+                            icon: const Icon(Icons.search),
+                            label: const Text('Descobrir Impressoras na Rede'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              foregroundColor: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // Seção para adicionar impressora manualmente
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Adicionar Impressora Manualmente',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _ipController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Printer IP',
+                                  hintText: '192.168.1.100',
+                                ),
+                                keyboardType: TextInputType.number,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            SizedBox(
+                              width: 100,
+                              child: TextField(
+                                controller: _portController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Port',
+                                ),
+                                keyboardType: TextInputType.number,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            ElevatedButton(
+                              onPressed: _isConnecting ? null : _testNetworkConnection,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue,
+                                foregroundColor: Colors.white,
+                              ),
+                              child: const Text('Testar'),
+                            ),
+                            const SizedBox(width: 8),
+                            ElevatedButton(
+                              onPressed: _addNetworkPrinter,
+                              child: const Text('Adicionar'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
