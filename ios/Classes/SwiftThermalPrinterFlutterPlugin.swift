@@ -12,11 +12,10 @@ public class SwiftThermalPrinterFlutterPlugin: NSObject, CBCentralManagerDelegat
     var flutterResult: FlutterResult?
     var bytes: [UInt8]?
     var stringprint = ""
-    
-    // UUIDs específicos para impressoras térmicas
-    let printerServiceUUID = CBUUID(string: "49535343-FE7D-4AE5-8FA9-9FAFD205E455")
-    let printerCharacteristicUUID = CBUUID(string: "49535343-1E4D-4BD9-BA61-23C647249616")
-    
+    var writeChunks: [UInt8] = []
+    var writeOffset: Int = 0
+    var writeChunkSize: Int = 512
+    var writeResult: FlutterResult?
     override init() {
         super.init()
     }
@@ -88,7 +87,22 @@ public class SwiftThermalPrinterFlutterPlugin: NSObject, CBCentralManagerDelegat
             } else {
                 result([])
             }
-            
+        case "pairedbluetooths":
+            discoveredDevices.removeAll()
+            centralManager?.scanForPeripherals(withServices: nil, options: nil)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+                self.centralManager?.stopScan()
+                let printers = self.discoveredDevices.map { deviceString -> [String: Any] in
+                    let components = deviceString.split(separator: "#")
+                    return [
+                        "name": String(components[0]),
+                        "bleAddress": String(components[1]),
+                        "type": "bluethoot",
+                        "isConnected": false
+                    ]
+                }
+                result(printers)
+            }
         case "connect":
             guard let bleAddress = call.arguments as? String,
                   let uuid = UUID(uuidString: bleAddress) else {
@@ -114,7 +128,7 @@ public class SwiftThermalPrinterFlutterPlugin: NSObject, CBCentralManagerDelegat
                     print("Successfully connected to peripheral")
                     self.connectedPeripheral = peripheral
                     self.connectedPeripheral.delegate = self
-                    self.connectedPeripheral.discoverServices([self.printerServiceUUID])
+                    self.connectedPeripheral.discoverServices(nil)
                     result(true)
                 } else {
                     print("Failed to connect to peripheral")
@@ -146,22 +160,11 @@ public class SwiftThermalPrinterFlutterPlugin: NSObject, CBCentralManagerDelegat
                 return
             }
             print("Attempting to write \(arguments.count) bytes")
-            
-            // Dividir os dados em chunks menores
-            let chunkSize = 512
-            var offset = 0
-            while offset < arguments.count {
-                let end = min(offset + chunkSize, arguments.count)
-                let chunk = Array(arguments[offset..<end])
-                let data = Data(chunk)
-                
-                print("Writing chunk of size \(chunk.count)")
-                connectedPeripheral?.writeValue(data, for: characteristic, type: .withoutResponse)
-                
-                offset = end
-                Thread.sleep(forTimeInterval: 0.1)
-            }
-            result(true)
+            writeChunks = arguments
+            writeOffset = 0
+            writeChunkSize = 512
+            writeResult = result
+            self.sendNextChunk()
             
         case "printstring":
             guard let string = call.arguments as? String,
@@ -234,17 +237,17 @@ public class SwiftThermalPrinterFlutterPlugin: NSObject, CBCentralManagerDelegat
             return
         }
         
-        if let services = peripheral.services {
-            for service in services {
-                print("Discovered service: \(service.uuid)")
-                if service.uuid == printerServiceUUID {
-                    print("Found printer service: \(service.uuid)")
-                    targetService = service
-                    peripheral.discoverCharacteristics([printerCharacteristicUUID], for: service)
-                }
-            }
+        guard let services = peripheral.services else {
+            print("No services found")
+            return
+        }
+        
+        for service in services {
+            print("Discovered service: \(service.uuid)")
+            peripheral.discoverCharacteristics(nil, for: service)
         }
     }
+    
     
     public func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
         if let error = error {
@@ -252,25 +255,63 @@ public class SwiftThermalPrinterFlutterPlugin: NSObject, CBCentralManagerDelegat
             return
         }
         
-        if let characteristics = service.characteristics {
-            for characteristic in characteristics {
-                print("Discovered characteristic: \(characteristic.uuid)")
-                if characteristic.uuid == printerCharacteristicUUID {
-                    targetCharacteristic = characteristic
-                    print("Found printer characteristic: \(characteristic.uuid)")
-                    print("Characteristic properties: \(characteristic.properties)")
-                }
+        guard let characteristics = service.characteristics else {
+            print("No characteristics found for service: \(service.uuid)")
+            return
+        }
+        
+        for characteristic in characteristics {
+            print("Discovered characteristic: \(characteristic.uuid) with properties: \(characteristic.properties)")
+            
+            // Kiểm tra xem có hỗ trợ write không
+            if characteristic.properties.contains(.write) {
+                targetCharacteristic = characteristic
+                targetService = service
+                print("Found writable characteristic: \(characteristic.uuid)")
+                break
             }
+        }
+        
+        if targetCharacteristic == nil {
+            print("No writable characteristic found in service: \(service.uuid)")
         }
     }
     
     public func peripheral(_ peripheral: CBPeripheral, didWriteValueFor characteristic: CBCharacteristic, error: Error?) {
         if let error = error {
             print("Error writing value: \(error.localizedDescription)")
-            flutterResult?(false)
+            writeResult?(false)
+            writeResult = nil
         } else {
             print("Successfully wrote value to characteristic: \(characteristic.uuid)")
-            flutterResult?(true)
+            // If there are more chunks to send, continue sending
+            if !writeChunks.isEmpty && writeOffset < writeChunks.count {
+                // Send the next chunk after a small delay
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.01) {
+                    self.sendNextChunk()
+                }
+            } else {
+                writeChunks = []
+                writeOffset = 0
+                writeResult?(true)
+                writeResult = nil
+            }
         }
     }
-} 
+    
+    func sendNextChunk() {
+        guard let characteristic = targetCharacteristic else { return }
+        if writeOffset >= writeChunks.count {
+            print("All chunks sent")
+            writeResult?(true)
+            writeResult = nil
+            return
+        }
+        let end = min(writeOffset + writeChunkSize, writeChunks.count)
+        let chunk = Array(writeChunks[writeOffset..<end])
+        let data = Data(chunk)
+        print("Writing chunk of size \(chunk.count)")
+        connectedPeripheral?.writeValue(data, for: characteristic, type: .withResponse)
+        writeOffset = end
+    }
+}
